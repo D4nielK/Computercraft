@@ -4,3 +4,39 @@ attach top drive C:\Users
 cd disk 
 
 //mit <dir> abchecken, in welchem Ordner du dich befindest
+
+
+
+
+// sync
+local user = "D4nielK"
+local repo = "Computercraft"
+local branch = "main"
+
+-- Liste hier alle Dateien auf, die du in VS Code erstellt hast:
+local files = { "matrix.lua"}
+
+
+//load
+local url = "https://raw.githubusercontent.com/D4nielK/Computercraft/main/CC_Energiematrix/matrix.lua"
+
+
+print("Versuche Download von Raw...")
+local response = http.get(url)
+
+if response then
+    local content = response.readAll()
+    local file = fs.open("start", "w") -- Speichert es als Datei 'start'
+    file.write(content)
+    file.close()
+    response.close()
+    print("Download fertig! Starte mit 'start'")
+else
+    print("Fehler: GitHub Raw Server nicht erreichbar.")
+end
+
+
+//startup.lua
+
+shell.run("sync")
+shell.run("load")
