@@ -1,0 +1,6 @@
+// CraftOS Change directony
+
+attach top drive C:\Users
+cd disk 
+
+//mit <dir> abchecken, in welchem Ordner du dich befindest
