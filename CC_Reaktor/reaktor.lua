@@ -1,24 +1,45 @@
 ---@diagnostic disable: undefined-global
 
+-- Peripherals
 local r = peripheral.find("fissionReactorLogicAdapter")
-if not r then error("Kein Fission Reactor Logic Adapter gefunden!") end
+if not r then error("Kein Fission Reactor Logic Adapter!") end
+
+local mon = peripheral.find("monitor")
+if not mon then error("Kein Monitor gefunden!") end
+
+mon.setTextScale(0.5)
+mon.clear()
 
 local MAX_TEMP = 1200
 local ALARM_SIDE = "right"
 
-local burnRate = 0
+-- Button-Definitionen
+local buttons = {
+  start = {x1=3,  y1=7, x2=14, y2=9,  label="START"},
+  stop  = {x1=18, y1=7, x2=29, y2=9,  label="STOP"},
+  scram = {x1=3,  y1=11,x2=29, y2=13, label="SCRAM"}
+}
 
-local function cls()
-  term.setCursorPos(1,1)
-  term.clear()
+local function inBox(x,y,b)
+  return x>=b.x1 and x<=b.x2 and y>=b.y1 and y<=b.y2
 end
 
-local function pct(x)
-  if type(x) ~= "number" then return "?" end
-  return string.format("%.1f%%", x)
+local function drawBox(b)
+  for y=b.y1,b.y2 do
+    mon.setCursorPos(b.x1,y)
+    mon.write(string.rep(" ", b.x2-b.x1+1))
+  end
+  local cx = math.floor((b.x1+b.x2-#b.label)/2)
+  local cy = math.floor((b.y1+b.y2)/2)
+  mon.setCursorPos(cx,cy)
+  mon.write(b.label)
 end
 
 local function draw()
+  mon.clear()
+  mon.setCursorPos(2,1)
+  mon.write("MEKANISM FISSION REACTOR")
+
   local status = r.getStatus()
   local temp   = r.getTemperature()
 
@@ -26,70 +47,37 @@ local function draw()
   local wasteP = r.getWasteFilledPercentage()
   local coolP  = r.getHeatedCoolantFilledPercentage()
 
-  local hot = (type(temp)=="number") and temp > MAX_TEMP
+  local hot = temp > MAX_TEMP
   redstone.setOutput(ALARM_SIDE, hot)
 
-  cls()
-  print("== Mekanism Fission Reactor ==")
-  print("")
-  print("Status:      "..(status and "ACTIVE" or "OFF"))
-  print("Temp:        "..math.floor(temp).." K  (max "..MAX_TEMP..")")
-  print("BurnRate:    "..string.format("%.2f", burnRate))
-  print("")
-  print("Fuel:        "..pct(fuelP))
-  print("Waste:       "..pct(wasteP))
-  print("Coolant:     "..pct(coolP))
-  print("")
-  print("Alarm:       "..(hot and "ON" or "off").." ("..ALARM_SIDE..")")
-  print("")
-  print("[S] Start   [X] Stop   [K] SCRAM")
-  print("[+] Burn +0.1   [-] Burn -0.1")
-  print("[Q] Quit")
+  mon.setCursorPos(2,3)
+  mon.write("Status: "..(status and "ACTIVE" or "OFF"))
+  mon.setCursorPos(2,4)
+  mon.write("Temp:   "..math.floor(temp).." K")
+
+  mon.setCursorPos(2,15)
+  mon.write(string.format("Fuel:   %.1f %%", fuelP))
+  mon.setCursorPos(2,16)
+  mon.write(string.format("Waste:  %.1f %%", wasteP))
+  mon.setCursorPos(2,17)
+  mon.write(string.format("Coolant:%.1f %%", coolP))
+
+  drawBox(buttons.start)
+  drawBox(buttons.stop)
+  drawBox(buttons.scram)
 end
 
--- initial burnRate aus dem Reaktor holen, falls möglich
-do
-  local ok, max = pcall(r.getMaxBurnRate)
-  if ok and type(max) == "number" then burnRate = math.min(1, max) end
-end
-
+-- Main loop
 while true do
   draw()
 
-  local timer = os.startTimer(0.5)
-  local pressedKey = nil
+  local event, side, x, y = os.pullEvent("monitor_touch")
 
-  while true do
-    local ev, p1 = os.pullEvent()
-    if ev == "key" then
-      pressedKey = keys.getName(p1)
-      break
-    elseif ev == "timer" and p1 == timer then
-      break
-    end
-  end
-
-  if pressedKey then
-    if pressedKey == "q" then break end
-
-    if pressedKey == "s" then
-      r.setLogicMode("ACTIVATION")
-    elseif pressedKey == "x" then
-      r.setLogicMode("DISABLED")
-    elseif pressedKey == "k" then
-      r.scram()
-    elseif pressedKey == "equals" or pressedKey == "plus" then
-      burnRate = burnRate + 0.1
-      local max = r.getMaxBurnRate()
-      if type(max) == "number" then burnRate = math.min(burnRate, max) end
-      r.setBurnRate(burnRate)
-    elseif pressedKey == "minus" then
-      burnRate = math.max(0, burnRate - 0.1)
-      r.setBurnRate(burnRate)
-    end
+  if inBox(x,y,buttons.start) then
+    r.setLogicMode("ACTIVATION")
+  elseif inBox(x,y,buttons.stop) then
+    r.setLogicMode("DISABLED")
+  elseif inBox(x,y,buttons.scram) then
+    r.scram()
   end
 end
-
-cls()
-redstone.setOutput(ALARM_SIDE, false)
-print("Controller stopped.")
