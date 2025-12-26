@@ -41,3 +41,23 @@ mon.clear()
 mon.setCursorPos(1,1)
 mon.write("Cherenkov UI loaded!")
 sleep(2)
+
+local data = readAll()
+
+mon.clear()
+mon.setCursorPos(1,1)
+mon.write("Reactor Temp: " .. tostring(data.reactor.temp))
+mon.setCursorPos(1,2)
+mon.write("Reactor Logic: " .. tostring(data.reactor.logic))
+mon.setCursorPos(1,3)
+mon.write("Fuel: " .. string.format("%.1f%%", data.reactor.fuelP))
+
+while true do
+  local d = readAll()
+  mon.clear()
+  mon.setCursorPos(1,1); mon.write("Cherenkov")
+  mon.setCursorPos(1,3); mon.write("Temp: " .. tostring(d.reactor.temp))
+  mon.setCursorPos(1,4); mon.write("Logic: " .. tostring(d.reactor.logic))
+  mon.setCursorPos(1,5); mon.write(string.format("Fuel: %.1f%%", d.reactor.fuelP))
+  sleep(CFG.refresh)
+end
