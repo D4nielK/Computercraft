@@ -1,13 +1,9 @@
 ---@diagnostic disable: undefined-global
-local name = "<PERIPHERAL_NAME>"
+local names = peripheral.getNames()
+table.sort(names)
 
-local methods = peripheral.getMethods(name)
-if not methods then
-  print("KEIN CC-PERIPHERAL:", name)
-  return
-end
-
-table.sort(methods)
-for _, m in ipairs(methods) do
-  print(m)
+for _, name in ipairs(names) do
+  local t = peripheral.getType(name)
+  local m = peripheral.getMethods(name)
+  print(name, t, m and #m or 0)
 end
