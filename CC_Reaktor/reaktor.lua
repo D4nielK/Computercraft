@@ -36,3 +36,8 @@ local function readAll()
     }
   }
 end
+
+mon.clear()
+mon.setCursorPos(1,1)
+mon.write("Cherenkov UI loaded!")
+sleep(2)
