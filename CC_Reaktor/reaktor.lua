@@ -11,10 +11,15 @@ local CFG = {
   reactor = "fissionReactorLogicAdapter_0",
   turbine = "turbineValve_0",
   manualMap = {
-  ["1:1"] = "x",
-  ["3:1"] = "x",
+  ["2:2"] = "x",
+  ["4:2"] = "x",
+  ["3:3"] = "x",
+  ["2:4"] = "x",
+  ["4:4"] = "x",
+  ["3:2"] = "o",
   ["2:3"] = "o",
-  ["4:4"] = "o",
+  ["4:3"] = "o",
+  ["3:4"] = "o",
 },
 
 }
@@ -153,7 +158,7 @@ local function drawBlockA()
   local rl = r.getLength()
   local rh = r.getHeight()
   put(x0, y0+1, ("Size: %dx%dx%d"):format(rw, rl, rh))
-  put(x0, y0+2, "Legend: x=Fuel (green), o=Water (blue)")
+  put(x0, y0+2, "Legend: x=Fuel, o=Water")
 
   -- Grid-Bereich (innen)
   local gx = L.A_grid.x + 2
