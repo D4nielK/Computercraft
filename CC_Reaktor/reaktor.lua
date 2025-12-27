@@ -389,7 +389,6 @@ local function drawStatic()
   panel(L.G_graph, "Temperatur Graph")
 
   -- Platzhaltertexte einmal
-  drawBlockB_static()
   drawBlockC_static()
   drawBlockE_static()
   drawBlockF_static()
