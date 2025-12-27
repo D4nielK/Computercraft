@@ -4,8 +4,11 @@
 -- BLOCK 0: SETUP + UTILS (Farben, Rechtecke, Labels)
 -- =========================================================
 
-local title = CFG.title 
-local tx = math.floor(SW/2) - math.floor("Cherenkov"/2)
+local CFG = {
+  title = "Cherenkov",
+  monitorScale = 0.5,
+  refresh = 0.2,
+}
 
 local mon = assert(peripheral.find("monitor"), "Kein Monitor gefunden")
 mon.setTextScale(CFG.monitorScale)
