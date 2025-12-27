@@ -325,7 +325,7 @@ local function drawBlockD()
   -- optional: Prozentwerte unten anzeigen
   bg(colors.white); fg(colors.black)
   put(L.D_bars.x, L.D_bars.y + L.D_bars.h - 2,
-    ("C:%3d%% F:%3d%% H:%3d%% W:%3d%%"):format(
+    ("C%3d F%3d H%3d W%3d"):format(
       math.floor(c*100+0.5), math.floor(f*100+0.5),
       math.floor(h*100+0.5), math.floor(w*100+0.5)
     )
