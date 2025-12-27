@@ -7,7 +7,7 @@
 local CFG = {
   title = "Cherenkov",
   monitorScale = 0.5,
-  refresh = 0.2,
+  refresh = 0.5,
 
   reactor = "fissionReactorLogicAdapter_0",
   turbine = "turbineValve_0",
@@ -186,8 +186,7 @@ end
 
 local function drawBlockD_dynamic()
   -- Innenbereich leeren (ohne Panel neu zu malen)
-  fillRect(L.D_bars.x+1, L.D_bars.y+2, L.D_bars.w-2, L.D_bars.h-3, colors.white)
-
+  
   local x0 = L.D_bars.x + 2
   local y0 = L.D_bars.y + 4
 
