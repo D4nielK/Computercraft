@@ -158,7 +158,8 @@ local function drawBlockA()
   local rl = r.getLength()
   local rh = r.getHeight()
   put(x0, y0+1, ("Size: %dx%dx%d"):format(rw, rl, rh))
-  put(x0, y0+2, "Legend: x=Fuel, o=Water")
+  put(x0, y0+2, "Legend: x=Fuel")
+  put(x0, y0+3, "o=Water")
 
   -- Grid-Bereich (innen)
   local gx = L.A_grid.x + 2
