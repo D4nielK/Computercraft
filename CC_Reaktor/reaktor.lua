@@ -12,8 +12,13 @@ local CFG = {
   turbine = "turbineValve_0",
 }
 
+
 local mon = assert(peripheral.find("monitor"), "Kein Monitor gefunden")
 mon.setTextScale(CFG.monitorScale)
+
+local r = assert(peripheral.wrap(CFG.reactor), "Reaktor nicht gefunden: "..CFG.reactor)
+local t = assert(peripheral.wrap(CFG.turbine), "Turbine nicht gefunden: "..CFG.turbine)
+
 
 local SW, SH = mon.getSize() -- bei dir: 121 x 81
 
