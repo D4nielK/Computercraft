@@ -286,31 +286,31 @@ end
 -- STATIC BLOCKS (B,C,E,F,G): einmal zeichnen
 -- =========================================================
 
-local function drawBlockB_static()
-  local x = L.B_reactor.x + 2
-  local y = L.B_reactor.y + 3
-  fg(colors.black); bg(colors.white)
-  put(x, y,     "Stats:")
-  put(x, y+2,   "Status: Aktiv/Deaktiv")
-  put(x, y+4,   "Coolant: .../max")
-  put(x, y+5,   "Fissile Fuel: .../max")
-  put(x, y+6,   "Heated Coolant: .../max")
-  put(x, y+7,   "Waste: .../max")
-  put(x, y+9,   "Max Burnrate: ... mb/t")
-  put(x, y+10,  "Burnrate: ... mb/t")
-  put(x, y+11,  "Heating rate: ...")
-  put(x, y+12,  "Temperature: ... K")
-  put(x, y+13,  "Damage: ... %")
+--local function drawBlockB_static()
+ -- local x = L.B_reactor.x + 2
+ -- local y = L.B_reactor.y + 3
+ -- fg(colors.black); bg(colors.white)
+ -- put(x, y,     "Stats:")
+ -- put(x, y+2,   "Status: Aktiv/Deaktiv")
+ -- put(x, y+4,   "Coolant: .../max")
+ -- put(x, y+5,   "Fissile Fuel: .../max")
+ -- put(x, y+6,   "Heated Coolant: .../max")
+ -- put(x, y+7,   "Waste: .../max")
+ -- put(x, y+9,   "Max Burnrate: ... mb/t")
+ -- put(x, y+10,  "Burnrate: ... mb/t")
+ -- put(x, y+11,  "Heating rate: ...")
+ -- put(x, y+12,  "Temperature: ... K")
+ -- put(x, y+13,  "Damage: ... %")
 
-  local sy = L.B_reactor.y + 30
-  put(x, sy,     "Settings (Alarm):")
-  put(x, sy+2,   "Burnrate set: ... mb/t")
-  put(x, sy+3,   "Max Temperature: ... K")
-  put(x, sy+4,   "Max Waste: ... %")
-  put(x, sy+5,   "Max Heated Coolant: ... %")
-  put(x, sy+6,   "Min Coolant: ... %")
-  put(x, sy+7,   "Min Fuel: ... %")
-end
+ -- local sy = L.B_reactor.y + 30
+ -- put(x, sy,     "Settings (Alarm):")
+ -- put(x, sy+2,   "Burnrate set: ... mb/t")
+ -- put(x, sy+3,   "Max Temperature: ... K")
+ -- put(x, sy+4,   "Max Waste: ... %")
+ -- put(x, sy+5,   "Max Heated Coolant: ... %")
+ -- put(x, sy+6,   "Min Coolant: ... %")
+ -- put(x, sy+7,   "Min Fuel: ... %")
+--end
 
 local function drawBlockC_static()
   local x = L.C_turbine.x + 2
@@ -404,6 +404,7 @@ drawStatic()
 drawBlockA_dynamic()
 
 while true do
+  drawBlockB_stats()
   drawBlockD_dynamic()
   sleep(CFG.refresh)
 end
