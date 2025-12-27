@@ -337,9 +337,9 @@ end
 -- =========================================================
 
 drawStatic()
+drawBlockA_dynamic()
 
 while true do
-  drawBlockA_dynamic()
   drawBlockD_dynamic()
   sleep(CFG.refresh)
 end
