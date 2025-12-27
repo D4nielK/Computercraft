@@ -91,40 +91,131 @@ local L = {
 }
 
 -- =========================================================
--- BLOCK A: Reaktor-Aufbau (nur visuell Platzhalter)
+-- BLOCK A: Reaktor-Aufbau LIVE (Size + Rods als x)
 -- =========================================================
-local function drawBlockA()
-  panel(L.A_grid, "Reactor Layout")
 
-  -- kleines 5x5 Grid (Platzhalter)
-  local gx = L.A_grid.x + 2
-  local gy = L.A_grid.y + 3
+local function safeCall(obj, fn, ...)
+  local f = obj[fn]
+  if type(f) ~= "function" then return nil end
+  local ok, res = pcall(f, obj, ...)
+  if ok then return res end
+  return nil
+end
 
-  fg(colors.black)
+-- versucht eine "Rod Map" aus dem Reaktor zu bekommen (je nach API)
+-- Rückgabe-Format, das wir wollen:
+-- map[w][l] = true/false  (true = rod/fuel assembly vorhanden)
+local function tryGetRodMap()
+  -- Kandidaten (je nach Mod/API, wir testen einfach mehrere)
+  local candidates = {
+    "getFuelAssemblyMap",
+    "getFuelAssembliesMap",
+    "getFuelAssemblyLocations",
+    "getFuelAssemblies",
+    "getRods", -- falls vorhanden
+  }
 
-  -- Kopfzeile "1 2 3 4 5"
-  put(gx + 2, gy, "1 2 3 4 5")
-  -- Links A–E
-  put(gx, gy + 2, "A")
-  put(gx, gy + 3, "B")
-  put(gx, gy + 4, "C")
-  put(gx, gy + 5, "D")
-  put(gx, gy + 6, "E")
-
-  -- Grid-Kästchen (nur visuell)
-  for row = 1, 5 do
-    for col = 1, 5 do
-      put(gx + 2 + (col - 1) * 2, gy + 1 + row, "[]")
+  for _, fn in ipairs(candidates) do
+    local res = safeCall(r, fn)
+    if type(res) == "table" then
+      return res, fn
     end
   end
 
-  -- ein paar "blaue Punkte" (später echte Daten)
-  fg(colors.blue)
-  put(gx + 2 + 2*2, gy + 1 + 2, "[]")
-  put(gx + 2 + 1*2, gy + 1 + 4, "[]")
-  put(gx + 2 + 3*2, gy + 1 + 4, "[]")
-  fg(colors.black)
+  return nil, nil
 end
+
+local function drawBlockA()
+  panel(L.A_grid, "Reactor Layout")
+
+  local x0 = L.A_grid.x + 2
+  local y0 = L.A_grid.y + 3
+
+  -- Größe lesen
+  local rw = safeCall(r, "getWidth")  or 0
+  local rl = safeCall(r, "getLength") or 0
+  local rh = safeCall(r, "getHeight") or 0
+
+  fg(colors.black)
+  put(x0, y0, ("Size: %dx%dx%d"):format(rw, rl, rh))
+
+  -- Grid-Bereich im Panel
+  local gx = L.A_grid.x + 2
+  local gy = L.A_grid.y + 5
+  local gw = L.A_grid.w - 4
+  local gh = L.A_grid.h - 7
+
+  -- Wir zeichnen in Zellen-Notation: "[ ]" => 3 chars pro Zelle
+  local cellW = 3
+  local maxCols = math.max(1, math.floor(gw / cellW))
+  local maxRows = math.max(1, gh)
+
+  -- Wenn Reaktorgröße unbekannt
+  if rw <= 0 or rl <= 0 then
+    put(gx, gy, "No size data from reactor.")
+    return
+  end
+
+  -- Downsampling: reactor coords -> screen cells
+  local stepX = math.max(1, math.ceil(rw / maxCols))
+  local stepY = math.max(1, math.ceil(rl / maxRows))
+
+  local cols = math.min(maxCols, math.ceil(rw / stepX))
+  local rows = math.min(maxRows, math.ceil(rl / stepY))
+
+  -- Rod map versuchen
+  local rodMap, rodFn = tryGetRodMap()
+
+  -- Debug: welche Map-Funktion hat funktioniert?
+  -- (Kannst du später auskommentieren)
+  put(x0, y0+1, "Rods src: "..tostring(rodFn))
+
+  -- Zeichnen
+  for sy = 0, rows - 1 do
+    mon.setCursorPos(gx, gy + sy)
+    local line = {}
+
+    for sx = 0, cols - 1 do
+      -- reactor coordinate (sample)
+      local rx = 1 + sx * stepX
+      local ry = 1 + sy * stepY
+
+      local hasRod = false
+
+      -- Wenn wir eine Map haben, versuchen wir best-effort:
+      if type(rodMap) == "table" then
+        -- mögliche Formate:
+        -- 1) rodMap[rx][ry] = true/false
+        -- 2) rodMap[ry][rx] = true/false
+        -- 3) Liste von Positionen { {x=.., y=..}, ... }
+
+        if type(rodMap[rx]) == "table" and type(rodMap[rx][ry]) ~= "nil" then
+          hasRod = not not rodMap[rx][ry]
+        elseif type(rodMap[ry]) == "table" and type(rodMap[ry][rx]) ~= "nil" then
+          hasRod = not not rodMap[ry][rx]
+        else
+          -- Positionsliste? -> einmalig in Set umwandeln wäre besser,
+          -- aber fürs erste: quick check (nur wenn nicht riesig)
+          if #rodMap > 0 then
+            for _, p in ipairs(rodMap) do
+              local px = p.x or p[1]
+              local py = p.y or p[2]
+              if px == rx and py == ry then
+                hasRod = true
+                break
+              end
+            end
+          end
+        end
+      end
+
+      line[#line+1] = hasRod and "[x]" or "[ ]"
+    end
+
+    mon.write(table.concat(line))
+  end
+end
+
 
 -- =========================================================
 -- BLOCK B: Reaktor (Stats + Settings) – nur Rahmen & Labels
