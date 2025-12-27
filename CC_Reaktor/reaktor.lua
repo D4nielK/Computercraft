@@ -301,8 +301,8 @@ local function drawBlockD()
 
   -- verfügbare Zeichenfläche für Balken
   local barH = L.D_bars.h - 7
-  local barW = 3
-  local gap  = 3
+  local barW = 2
+  local gap  = 2
 
   -- Prozentwerte holen
   local c = to01(r.getCoolantFilledPercentage())
