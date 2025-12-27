@@ -165,7 +165,7 @@ local function drawBlockA()
   end
 
   -- Debug: Anzahl Assemblies
-  put(x0, y0+2, "FuelAssemblies: " .. tostring(#assemblies))
+  put(x0, y0+2, "FuelAssemblies: " .. tostring(assemblies))
 
   -- 5) Zeichnen: wir sampeln jede Zelle auf (rx, rz)
   for sy = 0, rows - 1 do
