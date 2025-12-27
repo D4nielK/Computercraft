@@ -251,34 +251,87 @@ local function drawBlockC()
 end
 
 -- =========================================================
--- BLOCK D: Visuelle Balkenanzeige (C/F/H/W) – nur Platzhalter
+-- BLOCK D: Reactor Levels (C/F/H/W) LIVE (vertikale Balken)
 -- =========================================================
+
+local function clamp01(x)
+  if type(x) ~= "number" then return 0 end
+  if x < 0 then return 0 end
+  if x > 1 then return 1 end
+  return x
+end
+
+local function to01(pct)
+  -- akzeptiert 0..100 oder 0..1
+  if type(pct) ~= "number" then return 0 end
+  if pct > 1.001 then return clamp01(pct / 100) end
+  return clamp01(pct)
+end
+
+local function drawBar(x, y, w, h, frac01, fillColor, label)
+  -- Hintergrund: hellgrauer "Tank"
+  bg(colors.white); fg(colors.black)
+
+  -- Container innen hellgrau
+  bg(colors.lightGray)
+  for yy = 0, h-1 do
+    put(x, y+yy, string.rep(" ", w))
+  end
+
+  -- Füllhöhe
+  local fillH = math.floor(frac01 * h + 0.5)
+  if fillH > h then fillH = h end
+
+  -- Füllung von unten nach oben
+  bg(fillColor)
+  for yy = 0, fillH-1 do
+    put(x, y+(h-1-yy), string.rep(" ", w))
+  end
+
+  -- Label oben drüber
+  bg(colors.white); fg(colors.black)
+  put(x, y-1, label)
+end
+
 local function drawBlockD()
   panel(L.D_bars, "Reactor Levels")
 
-  local x = L.D_bars.x + 2
-  local y = L.D_bars.y + 4
+  local x0 = L.D_bars.x + 2
+  local y0 = L.D_bars.y + 4
 
-  fg(colors.black)
-  put(x, y-2, "C   F   H   W")
+  -- verfügbare Zeichenfläche für Balken
+  local barH = L.D_bars.h - 7
+  local barW = 3
+  local gap  = 3
 
-  -- 4 Balken-Container
-  for i = 0, 3 do
-    local bx = x + i*5
-    local by = y
-    -- Rahmen
-    bg(colors.lightGray); fg(colors.black)
-    for h = 0, 10 do
-      put(bx, by + h, "   ")
-    end
-    -- "Füllung" (Dummy)
-    bg(colors.green)
-    for h = 7, 10 do
-      put(bx, by + h, "   ")
-    end
-    bg(colors.white); fg(colors.black)
-  end
+  -- Prozentwerte holen
+  local c = to01(r.getCoolantFilledPercentage())
+  local f = to01(r.getFuelFilledPercentage())
+  local h = to01(r.getHeatedCoolantFilledPercentage())
+  local w = to01(r.getWasteFilledPercentage())
+
+  -- Farben nach Wunsch
+  local colCoolant = colors.blue
+  local colFuel    = colors.green      -- "dunkelgrün" gibt's nicht direkt; später können wir mit lime/green tricksen
+  local colHeated  = colors.gray
+  local colWaste   = colors.lime       -- hellgrün
+
+  -- Balken zeichnen (C F H W)
+  drawBar(x0 + 0*(barW+gap), y0, barW, barH, c, colCoolant, "C")
+  drawBar(x0 + 1*(barW+gap), y0, barW, barH, f, colFuel,    "F")
+  drawBar(x0 + 2*(barW+gap), y0, barW, barH, h, colHeated,  "H")
+  drawBar(x0 + 3*(barW+gap), y0, barW, barH, w, colWaste,   "W")
+
+  -- optional: Prozentwerte unten anzeigen
+  bg(colors.white); fg(colors.black)
+  put(L.D_bars.x+2, L.D_bars.y + L.D_bars.h - 2,
+    ("C:%3d%% F:%3d%% H:%3d%% W:%3d%%"):format(
+      math.floor(c*100+0.5), math.floor(f*100+0.5),
+      math.floor(h*100+0.5), math.floor(w*100+0.5)
+    )
+  )
 end
+
 
 -- =========================================================
 -- BLOCK E: Induction Matrix – nur Labels
