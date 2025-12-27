@@ -10,6 +10,13 @@ local CFG = {
   refresh = 0.2,
   reactor = "fissionReactorLogicAdapter_0",
   turbine = "turbineValve_0",
+  manualMap = {
+  ["1:1"] = "x",
+  ["3:1"] = "x",
+  ["2:3"] = "o",
+  ["4:4"] = "o",
+},
+
 }
 
 
@@ -98,8 +105,33 @@ local L = {
 }
 
 -- =========================================================
--- BLOCK A: Reactor Layout LIVE (Size + Fuel Assemblies als [x])
+-- BLOCK A: Reactor Layout LIVE (Size + manuelle Marker)
 -- =========================================================
+
+local function drawCell(x, y, mark)
+  -- Hintergrund weiß, Standardtext schwarz
+  bg(colors.white)
+
+  -- "["
+  fg(colors.black)
+  put(x, y, "[")
+
+  -- mark in Farbe
+  if mark == "x" then
+    fg(colors.green)
+    put(x+1, y, "x")
+  elseif mark == "o" then
+    fg(colors.blue)
+    put(x+1, y, "o")
+  else
+    fg(colors.black)
+    put(x+1, y, " ")
+  end
+
+  -- "]"
+  fg(colors.black)
+  put(x+2, y, "]")
+end
 
 local function drawBlockA()
   panel(L.A_grid, "Reactor Layout")
@@ -108,7 +140,7 @@ local function drawBlockA()
   local y0 = L.A_grid.y + 3
   fg(colors.black)
 
-  -- 1) Formed check
+  -- formed check (optional, aber hilfreich)
   local formed = r.isFormed and r.isFormed() or false
   put(x0, y0, "Formed: " .. tostring(formed))
   if not formed then
@@ -116,20 +148,20 @@ local function drawBlockA()
     return
   end
 
-  -- 2) Größe holen (deine Methoden existieren sicher)
+  -- Größe
   local rw = r.getWidth()
   local rl = r.getLength()
   local rh = r.getHeight()
   put(x0, y0+1, ("Size: %dx%dx%d"):format(rw, rl, rh))
+  put(x0, y0+2, "Legend: x=Fuel (green), o=Water (blue)")
 
-  -- 3) Grid-Bereich im Panel
-  -- Wir zeichnen Zellen als "[ ]" / "[x]" => 3 Zeichen pro Zelle
-  local cellW = 3
-
+  -- Grid-Bereich (innen)
   local gx = L.A_grid.x + 2
-  local gy = L.A_grid.y + 5
+  local gy = L.A_grid.y + 6
+
+  local cellW = 3
   local gw = L.A_grid.w - 4
-  local gh = L.A_grid.h - 7
+  local gh = L.A_grid.h - 8
 
   local maxCols = math.max(1, math.floor(gw / cellW))
   local maxRows = math.max(1, gh)
@@ -141,48 +173,22 @@ local function drawBlockA()
   local cols = math.min(maxCols, math.ceil(rw / stepX))
   local rows = math.min(maxRows, math.ceil(rl / stepY))
 
-  -- 4) Fuel Assemblies holen
-  local assemblies = r.getFuelAssemblies()
-
-  -- assemblies ist sehr wahrscheinlich eine Liste von Positionen.
-  -- Wir bauen daraus ein Set für O(1) Lookups.
-  local has = {}
-
-  if type(assemblies) == "table" then
-    for _, a in ipairs(assemblies) do
-      -- mögliche Formate:
-      -- a = {x=, y=, z=} oder {X=,Y=,Z=} oder {1,2,3}
-      local ax = a.x or a.X or a[1]
-      local ay = a.y or a.Y or a[2]
-      local az = a.z or a.Z or a[3]
-
-      -- Wir brauchen für 2D Grid nur x/z (Bodenfläche).
-      -- y ist Höhe, ignorieren wir.
-      if ax and az then
-        has[ax .. ":" .. az] = true
-      end
-    end
+  -- Hinweis, falls gesampelt wird
+  if stepX > 1 or stepY > 1 then
+    fg(colors.black)
+    put(x0, y0+3, ("Scaled: step %dx%d"):format(stepX, stepY))
   end
 
-  -- Debug: Anzahl Assemblies
-  put(x0, y0+2, "FuelAssemblies: " .. tostring(assemblies))
-
-  -- 5) Zeichnen: wir sampeln jede Zelle auf (rx, rz)
+  -- Zeichnen
   for sy = 0, rows - 1 do
-    mon.setCursorPos(gx, gy + sy)
-
-    local line = {}
     for sx = 0, cols - 1 do
       local rx = 1 + sx * stepX
       local rz = 1 + sy * stepY
-
       local key = rx .. ":" .. rz
-      local filled = has[key] == true
 
-      line[#line+1] = filled and "[x]" or "[ ]"
+      local mark = CFG.manualMap and CFG.manualMap[key] or nil
+      drawCell(gx + sx*cellW, gy + sy, mark)
     end
-
-    mon.write(table.concat(line))
   end
 end
 
