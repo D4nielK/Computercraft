@@ -8,6 +8,8 @@ local CFG = {
   title = "Cherenkov",
   monitorScale = 0.5,
   refresh = 0.2,
+  reactor = "fissionReactorLogicAdapter_0",
+  turbine = "turbineValve_0",
 }
 
 local mon = assert(peripheral.find("monitor"), "Kein Monitor gefunden")
@@ -95,12 +97,14 @@ local L = {
 -- =========================================================
 
 local function safeCall(obj, fn, ...)
+  if obj == nil then return nil end
   local f = obj[fn]
   if type(f) ~= "function" then return nil end
   local ok, res = pcall(f, obj, ...)
   if ok then return res end
   return nil
 end
+
 
 -- versucht eine "Rod Map" aus dem Reaktor zu bekommen (je nach API)
 -- Rückgabe-Format, das wir wollen:
