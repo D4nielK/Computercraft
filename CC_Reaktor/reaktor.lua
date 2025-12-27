@@ -182,7 +182,7 @@ local function drawBlockA()
   -- Hinweis, falls gesampelt wird
   if stepX > 1 or stepY > 1 then
     fg(colors.black)
-    put(x0, y0+3, ("Scaled: step %dx%d"):format(stepX, stepY))
+    put(x0, y0+4, ("Scaled: step %dx%d"):format(stepX, stepY))
   end
 
   -- Zeichnen
