@@ -150,6 +150,70 @@ local function drawBlockA_dynamic()
 end
 
 -- =========================================================
+-- BLOCK B (LIVE): Helpers zum "Zeile überschreiben" (kein Flackern)
+-- =========================================================
+
+local function writeLine(x, y, text, width)
+  -- überschreibt die komplette Zeile (innerhalb eines Panels) sauber
+  bg(colors.white); fg(colors.black)
+  mon.setCursorPos(x, y)
+  local s = tostring(text)
+  if width then
+    if #s > width then s = s:sub(1, width) end
+    mon.write(s .. string.rep(" ", math.max(0, width - #s)))
+  else
+    mon.write(s)
+  end
+end
+
+local function fmt0(n)  return (type(n)=="number") and string.format("%.0f", n) or "?" end
+local function fmt1(n)  return (type(n)=="number") and string.format("%.1f", n) or "?" end
+local function fmtPct(n)
+  if type(n) ~= "number" then return "?" end
+  if n <= 1.001 then n = n * 100 end
+  return string.format("%.1f%%", n)
+end
+
+-- =========================================================
+-- BLOCK B: Reaktor Stats LIVE (nur der Stats-Teil)
+-- =========================================================
+local function drawBlockB_stats()
+  -- Koordinaten: dieselben wie in drawBlockB_static()
+  local x = L.B_reactor.x + 2
+  local y = L.B_reactor.y + 3
+  local lineW = L.B_reactor.w - 4
+
+  -- Werte holen (aus Mekanism Logic Adapter)
+  local status = r.getStatus()                      -- bool
+  local tempK  = r.getTemperature()                 -- number (K)
+  local dmg    = r.getDamagePercent()               -- number (0..100 oder 0..1 je nach impl)
+  local burn   = r.getBurnRate()                    -- number
+  local maxBurn= r.getMaxBurnRate()                 -- number
+  local heat   = r.getHeatingRate()                 -- number
+
+  -- Tanks: ich zeige erstmal % (wie GUI-Balken), später können wir auch "mB/Cap" ergänzen
+  local cPct = r.getCoolantFilledPercentage()
+  local fPct = r.getFuelFilledPercentage()
+  local hPct = r.getHeatedCoolantFilledPercentage()
+  local wPct = r.getWasteFilledPercentage()
+
+  -- Zeilen aktualisieren (nur die, die sich ändern)
+  writeLine(x, y+2,  "Status: " .. (status and "Aktiv" or "Deaktiv"), lineW)
+
+  writeLine(x, y+4,  "Coolant:        " .. fmtPct(cPct), lineW)
+  writeLine(x, y+5,  "Fissile Fuel:   " .. fmtPct(fPct), lineW)
+  writeLine(x, y+6,  "Heated Coolant: " .. fmtPct(hPct), lineW)
+  writeLine(x, y+7,  "Waste:          " .. fmtPct(wPct), lineW)
+
+  writeLine(x, y+9,  "Max Burnrate: " .. fmt1(maxBurn) .. " mB/t", lineW)
+  writeLine(x, y+10, "Burnrate:     " .. fmt1(burn)    .. " mB/t", lineW)
+  writeLine(x, y+11, "Heating rate: " .. fmt0(heat), lineW)
+  writeLine(x, y+12, "Temperature:  " .. fmt1(tempK) .. " K", lineW)
+  writeLine(x, y+13, "Damage:       " .. fmtPct(dmg), lineW)
+end
+
+
+-- =========================================================
 -- BLOCK D: Reactor Levels (DYNAMIC INNEN)
 -- =========================================================
 
