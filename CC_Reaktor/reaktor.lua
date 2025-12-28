@@ -273,14 +273,15 @@ local function drawStatsLive()
 
   -- Werte schreiben (rechte Spalte in diesem Panel)
   write(monL, x+10, y,     (r.getStatus() and "ON " or "OFF"))
-  write(monL, x+10, y+2,   string.format("%4.0f K", r.getTemperature()))
-  write(monL, x+10, y+3,   string.format("%4.1f mB/t", r.getBurnRate()))
-  write(monL, x+10, y+4,   pct(r.getDamagePercent()))
+  write(monL, x+10, y+1,   pct(r.getCoolantFilledPercentage()))
+  write(monL, x+10, y+2,   pct(r.getFuelFilledPercentage()))
+  write(monL, x+10, y+3,   pct(r.getHeatedCoolantFilledPercentage()))
+  write(monL, x+10, y+4,   pct(r.getWasteFilledPercentage()))
 
-  write(monL, x+10, y+6,   pct(r.getCoolantFilledPercentage()))
-  write(monL, x+10, y+7,   pct(r.getFuelFilledPercentage()))
-  write(monL, x+10, y+8,   pct(r.getHeatedCoolantFilledPercentage()))
-  write(monL, x+10, y+9,   pct(r.getWasteFilledPercentage()))
+  write(monL, x+10, y+6,   string.format("%4.0f K", r.getTemperature()))
+  write(monL, x+10, y+7,   string.format("%4.1f mB/t", r.getBurnRate()))
+  write(monL, x+10, y+8,   pct(r.getDamagePercent()))
+
 end
 
 -- =========================================================
