@@ -110,8 +110,8 @@ local LL = leftLayout()
 -- LEFT: STATIC DRAW
 -- =========================================================
 local function drawLeftStatic()
+  local W, H = monL.getSize()
   clear(monL)
-  local W,H = LL.W, LL.H
 
   -- Titel
   write(monL, math.floor(W/2)-6, 1, "REACTOR UI")
