@@ -4,8 +4,8 @@
 -- CONFIG (HIER ANPASSEN!)
 -- =========================================================
 local CFG = {
-  LEFT_MONITOR  = "monitor_1",  -- ← HIER linker Monitor
-  RIGHT_MONITOR = "monitor_0",  -- ← HIER rechter Monitor
+  LEFT_MONITOR  = "monitor_left",  -- ← HIER linker Monitor
+  RIGHT_MONITOR = "monitor_right",  -- ← HIER rechter Monitor
 
   TEXT_SCALE_LEFT  = 1.0,
   TEXT_SCALE_RIGHT = 1.0,
