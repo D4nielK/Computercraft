@@ -4,8 +4,8 @@
 -- CONFIG
 -- =========================================================
 local CFG = {
-  leftIndex  = 2,    -- <-- anpassen: Nummer vom linken Monitor
-  rightIndex = 1,    -- <-- anpassen: Nummer vom rechten Monitor
+  leftMonitor  = "monitor_left",    -- <-- anpassen: Nummer vom linken Monitor
+  rightMonitor = "monitor_right",    -- <-- anpassen: Nummer vom rechten Monitor
 
   scaleLeft  = 1.0,
   scaleRight = 1.0,
