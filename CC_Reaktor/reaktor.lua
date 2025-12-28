@@ -83,8 +83,8 @@ local function leftLayout()
   return {
     W=W, H=H,
     -- linke Spalte
-    A = {x=2,       y=4,  w=lxW-1, h=16},   -- Reactor Layout
-    D = {x=2,       y=21, w=lxW-1, h=18},   -- Levels
+    A = {x=2,       y=4,  w=lxW+1, h=16},   -- Reactor Layout
+    D = {x=2,       y=21, w=lxW+1, h=18},   -- Levels
     -- rechte Spalte
     B = {x=2+lxW+2, y=4,  w=rxW, h=H-5},  -- Stats groß
   }
