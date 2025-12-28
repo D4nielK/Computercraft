@@ -128,14 +128,14 @@ local function drawLeftStatic()
   local x = LL.B.x + 2
   local y = LL.B.y + 3
   write(monL, x, y,     "Status:")
-  write(monL, x, y+2,   "Temp:")
-  write(monL, x, y+3,   "Burn:")
-  write(monL, x, y+4,   "Damage:")
+  write(monL, x, y+2,   "Coolant:")
+  write(monL, x, y+3,   "Fuel:")
+  write(monL, x, y+4,   "Heated:")
+  write(monL, x, y+5,   "Waste:")
 
-  write(monL, x, y+6,   "Coolant:")
-  write(monL, x, y+7,   "Fuel:")
-  write(monL, x, y+8,   "Heated:")
-  write(monL, x, y+9,   "Waste:")
+  write(monL, x, y+6,   "Temp:")
+  write(monL, x, y+7,   "Burn:")
+  write(monL, x, y+8,   "Damage:")
 end
 
 -- =========================================================
