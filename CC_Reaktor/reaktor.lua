@@ -73,22 +73,36 @@ end
 -- =========================================================
 -- LEFT MONITOR LAYOUT
 -- =========================================================
+
 local function leftLayout()
   local W,H = monL.getSize()
 
-  -- links: Layout + Levels links, Stats rechts (wie früher)
-  local lxW = math.floor(W * 0.45)
-  local rxW = W - lxW - 3
+  -- FEINTUNING
+  local leftMargin  = 2
+  local gap         = 2
+  local rightMargin = 3
+
+  -- linke Spalte bewusst schmal
+  local lxW = 18     -- <<< DAS ist der wichtigste Wert
+
+  -- rechte Spalte bekommt den Rest, aber nicht bis zum Rand
+  local rxW = W - leftMargin - lxW - gap - rightMargin
 
   return {
-    W=W, H=H,
-    -- linke Spalte
-    A = {x=2,       y=4,  w=lxW+1, h=16},   -- Reactor Layout
-    D = {x=2,       y=21, w=lxW+1, h=18},   -- Levels
-    -- rechte Spalte
-    B = {x=2+lxW+2, y=4,  w=rxW, h=H-5},  -- Stats groß
+    -- Linke Spalte (Layout + Levels)
+    A = {x=leftMargin, y=4,  w=lxW, h=14},
+    D = {x=leftMargin, y=19, w=lxW, h=16},
+
+    -- Rechte Spalte (Stats), rückt sichtbar nach links
+    B = {
+      x = leftMargin + lxW + gap,
+      y = 4,
+      w = rxW,
+      h = 32
+    },
   }
 end
+
 
 local LL = leftLayout()
 
