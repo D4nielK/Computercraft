@@ -6,7 +6,7 @@
 
 local CFG = {
   title = "Cherenkov",
-  monitorScale = 0.5,
+  monitorScale = 1.0,
   refresh = 0.5,
 
   reactor = "fissionReactorLogicAdapter_0",
