@@ -80,10 +80,10 @@ local function leftLayout()
   -- FEINTUNING
   local leftMargin  = 2
   local gap         = 2
-  local rightMargin = 3
+  local rightMargin = 2
 
   -- linke Spalte bewusst schmal
-  local lxW = 18     -- <<< DAS ist der wichtigste Wert
+  local lxW = 20     -- <<< DAS ist der wichtigste Wert
 
   -- rechte Spalte bekommt den Rest, aber nicht bis zum Rand
   local rxW = W - leftMargin - lxW - gap - rightMargin
