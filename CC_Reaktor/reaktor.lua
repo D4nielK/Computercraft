@@ -83,7 +83,7 @@ local function leftLayout()
   local rightMargin = 2
 
   -- linke Spalte bewusst schmal
-  local lxW = 20     -- <<< DAS ist der wichtigste Wert
+  local lxW = 25     -- <<< DAS ist der wichtigste Wert
 
   -- rechte Spalte bekommt den Rest, aber nicht bis zum Rand
   local rxW = W - leftMargin - lxW - gap - rightMargin
