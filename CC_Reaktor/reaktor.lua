@@ -96,13 +96,24 @@ end
 
 local function fmtFE(v, perTick)
   if type(v) ~= "number" then return "N/A" end
-  local suf = perTick and " FE/t" or " FE"
+
+  -- Suffix ohne führendes Leerzeichen
+  local suf = perTick and "FE/t" or "FE"
+
   local a = math.abs(v)
-  if a >= 1e12 then return string.format("%.2f T%s", v/1e12, suf) end
-  if a >= 1e9  then return string.format("%.2f G%s", v/1e9,  suf) end
-  if a >= 1e6  then return string.format("%.2f M%s", v/1e6,  suf) end
-  if a >= 1e3  then return string.format("%.2f k%s", v/1e3,  suf) end
-  return string.format("%.0f%s", v, suf)
+  local num, prefix
+
+  if a >= 1e12 then num, prefix = v/1e12, "T"
+  elseif a >= 1e9 then num, prefix = v/1e9, "G"
+  elseif a >= 1e6 then num, prefix = v/1e6, "M"
+  elseif a >= 1e3 then num, prefix = v/1e3, "k"
+  else
+    -- unter 1000 ohne Prefix, damit es sauber bleibt
+    return string.format("%.0f%s", v, suf)
+  end
+
+  -- ohne Leerzeichen: 1.83MFE/t
+  return string.format("%.2f%s%s", num, prefix, suf)
 end
 
 
