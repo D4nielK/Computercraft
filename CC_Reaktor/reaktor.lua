@@ -98,10 +98,10 @@ local function fmtFE(v, perTick)
   if type(v) ~= "number" then return "N/A" end
   local suf = perTick and " FE/t" or " FE"
   local a = math.abs(v)
-  if a >= 1e12 then return string.format("%.2fT%s", v/1e12, suf) end
-  if a >= 1e9  then return string.format("%.2fG%s", v/1e9,  suf) end
-  if a >= 1e6  then return string.format("%.2fM%s", v/1e6,  suf) end
-  if a >= 1e3  then return string.format("%.2fk%s", v/1e3,  suf) end
+  if a >= 1e12 then return string.format("%.2f T%s", v/1e12, suf) end
+  if a >= 1e9  then return string.format("%.2f G%s", v/1e9,  suf) end
+  if a >= 1e6  then return string.format("%.2f M%s", v/1e6,  suf) end
+  if a >= 1e3  then return string.format("%.2f k%s", v/1e3,  suf) end
   return string.format("%.0f%s", v, suf)
 end
 
@@ -364,7 +364,7 @@ local function drawTurbineLive()
   writePad(monL, valX+4, y+4,   energyPct and pct(energyPct) or "N/A", valW-4)
 
   -- Max Production / Production
- writePad(monL, valX,   y+6, maxProd and fmtFE(maxProd, true) or "N/A", valW)
+ writePad(monL, valX+3,   y+6, maxProd and fmtFE(maxProd, true) or "N/A", valW-3)
  writePad(monL, valX+6, y+7, prod    and fmtFE(prod, true)    or "N/A", valW-6)
 
 
