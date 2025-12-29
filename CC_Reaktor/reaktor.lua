@@ -254,7 +254,7 @@ local function drawLevelsLive()
   monL.setBackgroundColor(colors.white)
   monL.setTextColor(colors.black)
   write(monL, LL.D.x+1, LL.D.y + LL.D.h - 2,
-    ("C%3d F%3d H%3d W%3d"):format(
+    ("C%3d%% F%3d%% H%3d%% W%3d%%"):format(
       math.floor(c*100+0.5), math.floor(f*100+0.5),
       math.floor(h*100+0.5), math.floor(w*100+0.5)
     )
