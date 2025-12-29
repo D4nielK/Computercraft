@@ -340,14 +340,14 @@ local function drawTurbineLive()
   writePad(monL, valX+4, y+4,   energyPct and pct(energyPct) or "N/A", valW-4)
 
   -- Max Production / Production
-  writePad(monL, valX, y+6,   maxProd and (string.format("%.0f FE/t", maxProd)) or "N/A", valW)
-  writePad(monL, valX+6, y+7,   prod    and (string.format("%.0f FE/t", prod))    or "N/A", valW-6)
+  writePad(monL, valX, y+6,   maxProd and (string.format("%.0fFE/t", maxProd)) or "N/A", valW)
+  writePad(monL, valX+6, y+7,   prod    and (string.format("%.0fFE/t", prod))    or "N/A", valW-6)
 
   -- Steam input
-  writePad(monL, valX+6, y+8,   steamIn and (string.format("%.0f mB/t", steamIn)) or "N/A", valW-6)
+  writePad(monL, valX+6, y+8,   steamIn and (string.format("%.0fmB/t", steamIn)) or "N/A", valW-6)
 
   -- Water Output: in deiner Liste gibt’s nur MAX, kein aktuelles Out -> zeigen wir max
-  writePad(monL, valX, y+9,   maxWaterOut and (string.format("%.0f max", maxWaterOut)) or "N/A", valW)
+  writePad(monL, valX, y+9,   maxWaterOut and (string.format("%.0fmax", maxWaterOut)) or "N/A", valW)
 
   -- Flow + maxFlow (wenn verfügbar)
   if flow and maxFlow then
