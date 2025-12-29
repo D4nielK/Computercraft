@@ -17,8 +17,11 @@ local CFG = {
   REACTOR_TYPE = "fissionReactorLogicAdapter",
 
   -- Optional: wenn du Namen kennst, kannst du sie hier fest eintragen.
-  TURBINE_NAME = turbineValve_0,  -- z.B. "turbineValve_0"
-  MATRIX_NAME  = inductionPort_0,  -- z.B. "inductionPort_0"
+  TURBINE_NAME = "turbineValve_0",  -- z.B. "turbineValve_0"
+  MATRIX_NAME  = "inductionPort_0",  -- z.B. "inductionPort_0"
+
+  ENERGY_J_PER_FE = 2.5,
+
 }
 
 -- =========================================================
@@ -85,6 +88,23 @@ local function pct(v)
   if v<=1.001 then v=v*100 end
   return string.format("%3.0f%%", v)
 end
+
+local function J_to_FE(j)
+  if type(j) ~= "number" then return nil end
+  return j / (CFG.ENERGY_J_PER_FE or 2.5)
+end
+
+local function fmtFE(v, perTick)
+  if type(v) ~= "number" then return "N/A" end
+  local suf = perTick and " FE/t" or " FE"
+  local a = math.abs(v)
+  if a >= 1e12 then return string.format("%.2f T%s", v/1e12, suf) end
+  if a >= 1e9  then return string.format("%.2f G%s", v/1e9,  suf) end
+  if a >= 1e6  then return string.format("%.2f M%s", v/1e6,  suf) end
+  if a >= 1e3  then return string.format("%.2f k%s", v/1e3,  suf) end
+  return string.format("%.0f%s", v, suf)
+end
+
 
 local function safeCall(obj, fn, ...)
   if not obj or type(obj[fn]) ~= "function" then return nil end
@@ -307,8 +327,10 @@ local function drawTurbineLive()
 
   -- Werte (genau aus deiner Method-Liste)
   local formed      = safeCall(t, "isFormed")
-  local prod        = safeCall(t, "getProductionRate")          -- FE/t
-  local maxProd     = safeCall(t, "getMaxProduction")           -- FE/t
+  local prodJ        = safeCall(t, "getProductionRate")          -- FE/t
+  local maxProdJ     = safeCall(t, "getMaxProduction")           -- FE/t
+  local prod        = J_to_FE(prodJ)
+  local maxProd     = J_to_FE(maxProdJ)
   local steamPct    = safeCall(t, "getSteamFilledPercentage")   -- 0..1 oder 0..100
   local energyPct   = safeCall(t, "getEnergyFilledPercentage")  -- 0..1 oder 0..100
   local steamIn     = safeCall(t, "getLastSteamInputRate")      -- mB/t
@@ -342,8 +364,9 @@ local function drawTurbineLive()
   writePad(monL, valX+4, y+4,   energyPct and pct(energyPct) or "N/A", valW-4)
 
   -- Max Production / Production
-  writePad(monL, valX, y+6,   maxProd and (string.format("%.0fFE/t", maxProd)) or "N/A", valW)
-  writePad(monL, valX+6, y+7,   prod    and (string.format("%.0fFE/t", prod))    or "N/A", valW-6)
+ writePad(monL, valX,   y+6, maxProd and fmtFE(maxProd, true) or "N/A", valW)
+ writePad(monL, valX+6, y+7, prod    and fmtFE(prod, true)    or "N/A", valW-6)
+
 
   -- Steam input
  writePad(monL, valX+6, y+8, steamIn and (string.format("%.0fmB/t", steamIn)) or "N/A", valW-6)
@@ -370,11 +393,17 @@ local function drawMatrixLive()
   local valX = x + 10      -- Werte-Spalte (wenn du es mehr rechts willst: 11/12)
   local valW = LL.E.w - (valX - LL.E.x) - 2
 
-  local cap    = mtx.getMaxEnergy()
-  local stored = mtx.getEnergy()
-  local input  = mtx.getLastInput()
-  local output = mtx.getLastOutput()
-  local change = input - output
+  local capJ    = mtx.getMaxEnergy()
+  local storedJ = mtx.getEnergy()
+  local inputJ  = mtx.getLastInput()
+  local outputJ = mtx.getLastOutput()
+
+  local cap    = J_to_FE(capJ)
+  local stored = J_to_FE(storedJ)
+  local input  = J_to_FE(inputJ)
+  local output = J_to_FE(outputJ)
+  local change = (type(input)=="number" and type(output)=="number") and (input - output) or nil
+
 
   writePad(monL, valX, y,     fmtFE(cap, false),    valW)
   writePad(monL, valX, y+2,   fmtFE(stored, false), valW)
