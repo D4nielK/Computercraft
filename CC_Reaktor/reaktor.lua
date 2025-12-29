@@ -370,10 +370,10 @@ local function drawMatrixLive()
   local valX = x + 10      -- Werte-Spalte (wenn du es mehr rechts willst: 11/12)
   local valW = LL.E.w - (valX - LL.E.x) - 2
 
-  local cap    = m.getMaxEnergy()
-  local stored = m.getEnergy()
-  local input  = m.getLastInput()
-  local output = m.getLastOutput()
+  local cap    = mtx.getMaxEnergy()
+  local stored = mtx.getEnergy()
+  local input  = mtx.getLastInput()
+  local output = mtx.getLastOutput()
   local change = input - output
 
   writePad(monL, valX, y,     fmtFE(cap, false),    valW)
