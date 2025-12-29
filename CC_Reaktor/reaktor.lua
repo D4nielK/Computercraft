@@ -253,8 +253,8 @@ local function drawStatsLive()
   writePad(monL, valX, y+4,   pct(r.getHeatedCoolantFilledPercentage()), valW)
   writePad(monL, valX, y+5,   pct(r.getWasteFilledPercentage()), valW)
 
-  
-  writePad(monL, valX, y+7,   string.format("%4.0fmB/t", r.getMaxBurnRate()))
+  local maxBurn = safeCall(r, "getMaxBurnRate")
+  writePad(monL, valX, y+7,   (maxBurn and string.format("%.1f mB/t", maxBurn) or "N/A"), valW)
   writePad(monL, valX, y+8,   string.format("%.1f mB/t", (safeCall(r,"getBurnRate") or 0)), valW)
   writePad(monL, valX, y+9,   string.format("%.0f K", (safeCall(r,"getTemperature") or 0)), valW)
   writePad(monL, valX, y+10,  pct(safeCall(r,"getDamagePercent")), valW)
