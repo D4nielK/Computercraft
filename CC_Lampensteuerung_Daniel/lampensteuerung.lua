@@ -124,7 +124,7 @@ while true do
   elseif inButton(buttons.white, x, y) then
     pressed = buttons.white
     drawButton(pressed.x, pressed.y, pressed.w, pressed.h,
-      "Hauptlicht", state.white, true)
+      "Deckenlicht", state.white, true)
     sleep(0.1)
     state.white = not state.white
 
