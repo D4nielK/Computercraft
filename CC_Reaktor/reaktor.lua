@@ -416,11 +416,11 @@ local function drawMatrixLive()
   local change = (type(input)=="number" and type(output)=="number") and (input - output) or nil
 
 
-  writePad(monL, valX+8, y,     fmtFE(cap, false),    valW-8)
-  writePad(monL, valX+8, y+2,   fmtFE(stored, false), valW-8)
-  writePad(monL, valX+8, y+4,   fmtFE(input, true),   valW-8)
-  writePad(monL, valX+8, y+5,   fmtFE(output, true),  valW-8)
-  writePad(monL, valX+8, y+7,   fmtFE(change, true),  valW-8)
+  writePad(monL, valX+4, y,     fmtFE(cap, false),    valW-4)
+  writePad(monL, valX+5, y+1,   fmtFE(stored, false), valW-5)
+  writePad(monL, valX+5, y+2,   fmtFE(input, true),   valW-5)
+  writePad(monL, valX+5, y+3,   fmtFE(output, true),  valW-5)
+  writePad(monL, valX+5, y+4,   fmtFE(change, true),  valW-5)
 end
 
 
