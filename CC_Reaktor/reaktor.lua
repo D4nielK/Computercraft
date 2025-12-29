@@ -279,9 +279,9 @@ local function drawStatsLive()
   write(monL, x+18, y+4,   pct(r.getHeatedCoolantFilledPercentage()))
   write(monL, x+18, y+5,   pct(r.getWasteFilledPercentage()))
 
-  write(monL, x+18, y+7,   string.format("%4.0f mB/t", r.getMaxBurnRate()))
-  write(monL, x+18, y+8,   string.format("%4.1f mB/t", r.getBurnRate()))
-  write(monL, x+18, y+9,   string.format("%4.0f K", r.getTemperature()))
+  write(monL, x+17, y+7,   string.format("%4.0f mB/t", r.getMaxBurnRate()))
+  write(monL, x+17, y+8,   string.format("%4.1f mB/t", r.getBurnRate()))
+  write(monL, x+17, y+9,   string.format("%4.0f K", r.getTemperature()))
   write(monL, x+18, y+10,   pct(r.getDamagePercent()))
 
 end
