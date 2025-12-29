@@ -236,7 +236,7 @@ end
 
 local function drawLevelsLive()
   -- wir löschen NICHT das ganze Panel, nur malen Balken neu
-  local x0 = LL.D.x + 2
+  local x0 = LL.D.x + 1
   local y0 = LL.D.y + 4
   local barH = LL.D.h - 7
   local barW, gap = 4, 2
