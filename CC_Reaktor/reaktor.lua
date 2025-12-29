@@ -93,6 +93,15 @@ local function safeCall(obj, fn, ...)
   return nil
 end
 
+local function firstCall(obj, names)
+  for _, fn in ipairs(names) do
+    local v = safeCall(obj, fn)
+    if v ~= nil then return v end
+  end
+  return nil
+end
+
+
 local function to01(v)
   if type(v)~="number" then return 0 end
   if v > 1.001 then v = v/100 end
@@ -168,13 +177,22 @@ local function drawLeftStatic()
   write(monL, x, y+9,   "Temp:")
   write(monL, x, y+10,  "Damage:")
 
-  -- Turbine labels (kompakt)
+  -- Turbine labels (wie gewünscht, mit Leerzeilen)
   local tx = LL.C.x + 2
   local ty = LL.C.y + 3
-  write(monL, tx, ty,     "Active:")
-  write(monL, tx, ty+2,   "Steam:")
-  write(monL, tx, ty+3,   "Energy:")
-  write(monL, tx, ty+4,   "Prod:")
+
+  write(monL, tx, ty,     "Status:")
+  write(monL, tx, ty+2,   "Steam/HC:")
+  write(monL, tx, ty+3,   "Water:")
+  write(monL, tx, ty+4,   "Energy:")
+
+  write(monL, tx, ty+6,   "Max Prod:")
+  write(monL, tx, ty+7,   "Prod:")
+
+  write(monL, tx, ty+8,   "Steam In:")
+  write(monL, tx, ty+9,   "Water Out:")
+  write(monL, tx, ty+10,  "Flow:")
+
 
   -- Matrix labels
   local mx = LL.E.x + 2
@@ -269,26 +287,68 @@ local function drawTurbineLive()
 
   local x = LL.C.x + 2
   local y = LL.C.y + 3
-  local valX = x + 10
+  local valX = x + 11
   local valW = LL.C.w - (valX - LL.C.x) - 2
 
+  -- Falls Turbine nicht gefunden
   if not t then
-    writePad(monL, valX, y,   "N/A", valW)
-    writePad(monL, valX, y+2, "N/A", valW)
-    writePad(monL, valX, y+3, "N/A", valW)
-    writePad(monL, valX, y+4, "N/A", valW)
+    writePad(monL, valX, y,     "N/A", valW)
+    writePad(monL, valX, y+2,   "N/A", valW)
+    writePad(monL, valX, y+3,   "N/A", valW)
+    writePad(monL, valX, y+4,   "N/A", valW)
+    writePad(monL, valX, y+6,   "N/A", valW)
+    writePad(monL, valX, y+7,   "N/A", valW)
+    writePad(monL, valX, y+8,   "N/A", valW)
+    writePad(monL, valX, y+9,   "N/A", valW)
+    writePad(monL, valX, y+10,  "N/A", valW)
     return
   end
 
-  local active = safeCall(t, "getActive")
-  local steamP = safeCall(t, "getSteamFilledPercentage")
-  local energy = safeCall(t, "getEnergyStored")
-  local prod   = safeCall(t, "getProductionRate")
+  -- --- Werte holen (mit Fallback-Namen) ---
+  local active = firstCall(t, {"getActive", "isActive"})
 
-  writePad(monL, valX, y,   tostring(active), valW)
-  writePad(monL, valX, y+2, steamP and pct(steamP) or "N/A", valW)
-  writePad(monL, valX, y+3, energy and tostring(energy) or "N/A", valW)
-  writePad(monL, valX, y+4, prod and (tostring(prod).." FE/t") or "N/A", valW)
+  -- Steam/Heated Coolant in % (je nach Implementation)
+  local steamPct = firstCall(t, {"getSteamFilledPercentage", "getSteamFillPercentage", "getSteamPercent"})
+  local hcPct    = firstCall(t, {"getHeatedCoolantFilledPercentage", "getHeatedCoolantFillPercentage", "getHeatedCoolantPercent"})
+  local steamOrHC = steamPct or hcPct
+
+  -- Water %
+  local waterPct  = firstCall(t, {"getWaterFilledPercentage", "getWaterFillPercentage", "getWaterPercent"})
+
+  -- Energy % (oder aus Stored/Max berechnen)
+  local energyPct = firstCall(t, {"getEnergyFilledPercentage", "getEnergyFillPercentage", "getEnergyPercent"})
+  if not energyPct then
+    local stored = firstCall(t, {"getEnergyStored", "getStoredEnergy"})
+    local cap    = firstCall(t, {"getMaxEnergy", "getEnergyCapacity", "getMaxEnergyStored"})
+    if type(stored)=="number" and type(cap)=="number" and cap > 0 then
+      energyPct = stored / cap
+    end
+  end
+
+  -- Production
+  local maxProd = firstCall(t, {"getMaxProduction", "getMaxProductionRate", "getMaxEnergyProduction"})
+  local prod    = firstCall(t, {"getProductionRate", "getProduction", "getEnergyProducedLastTick"})
+
+  -- Rates (mB/t)
+  local steamIn  = firstCall(t, {"getSteamInputRate", "getSteamInput", "getSteamIn"})
+  local waterOut = firstCall(t, {"getWaterOutputRate", "getWaterOutput", "getWaterOut"})
+
+  -- Flow rate
+  local flow = firstCall(t, {"getFlowRate", "getFlow", "getFluidFlowRate"})
+
+  -- --- Anzeigen ---
+  writePad(monL, valX, y,    (active == nil) and "N/A" or (active and "Active" or "Inactive"), valW)
+
+  writePad(monL, valX, y+2,  (steamOrHC and pct(steamOrHC)) or "N/A", valW)
+  writePad(monL, valX, y+3,  (waterPct and pct(waterPct)) or "N/A", valW)
+  writePad(monL, valX, y+4,  (energyPct and pct(energyPct)) or "N/A", valW)
+
+  writePad(monL, valX, y+6,  (maxProd and (string.format("%.0f FE/t", maxProd))) or "N/A", valW)
+  writePad(monL, valX, y+7,  (prod    and (string.format("%.0f FE/t", prod   ))) or "N/A", valW)
+
+  writePad(monL, valX, y+8,  (steamIn  and (string.format("%.0f mB/t", steamIn ))) or "N/A", valW)
+  writePad(monL, valX, y+9,  (waterOut and (string.format("%.0f mB/t", waterOut))) or "N/A", valW)
+  writePad(monL, valX, y+10, (flow     and (tostring(flow))) or "N/A", valW)
 end
 
 -- =========================================================
