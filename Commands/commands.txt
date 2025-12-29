@@ -7,6 +7,9 @@ cd disk
 
 
 
+//______________________________________________________
+
+//NEUE COMPUTER IN GITHUB REPOSITORY SPEICHERN
 
 // sync
 local user = "D4nielK"
@@ -14,11 +17,13 @@ local repo = "Computercraft"
 local branch = "main"
 
 -- Liste hier alle Dateien auf, die du in VS Code erstellt hast:
-local files = { "matrix.lua"}
+local files = { "lampensteuerung.lua", }
 
 
 //load
 local url = "https://raw.githubusercontent.com/D4nielK/Computercraft/main/CC_Energiematrix/matrix.lua"
+local url = "https://raw.githubusercontent.com/D4nielK/Computercraft/main/CC_Lampensteuerung_Daniel/lampensteuerung.lua"
+
 
 
 print("Versuche Download von Raw...")
