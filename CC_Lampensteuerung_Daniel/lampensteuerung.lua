@@ -78,7 +78,7 @@ local function drawAll()
 
   -- Einzel-Buttons
   drawButton(x, top, btnW, btnH, "Indirekte Beleuchtung", state.orange, false)
-  drawButton(x, top + btnH + spacing, btnW, btnH, "Hauptlicht", state.white, false)
+  drawButton(x, top + btnH + spacing, btnW, btnH, "Deckenlicht", state.white, false)
 
   -- Zentral-Button
   drawButton(
