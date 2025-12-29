@@ -9,7 +9,6 @@ local WHITE  = colors.white
 local mon = peripheral.wrap(monitorSide)
 mon.setTextScale(1)
 mon.setBackgroundColor(colors.black)
-mon.setTextColor(colors.white)
 mon.clear()
 
 local state = {
@@ -17,7 +16,7 @@ local state = {
   white  = false,
 }
 
--- --- Hilfen --- --
+-- ---- Hilfsfunktionen ---- --
 
 local function buildBundled()
   local v = 0
@@ -30,25 +29,83 @@ local function updateOutput()
   redstone.setBundledOutput(redstoneSide, buildBundled())
 end
 
--- Zeichnet einen Button (Rechteck)
-local function drawButton(x, y, w, label, bg, fg)
-  mon.setBackgroundColor(bg)
-  mon.setTextColor(fg)
 
-  for i = 0, 2 do
-    mon.setCursorPos(x, y + i)
-    mon.write(string.rep(" ", w))
-  end
+-- ===== Zeichnen ===== --
 
-  -- Text in die Mitte setzen
-  local tx = x + math.floor((w - #label) / 2)
+-- Label mit 3D-Effekt
+local function drawLabel3D(x, y, w, text)
+  mon.setBackgroundColor(colors.lightGray)
+  mon.setCursorPos(x, y)
+  mon.write(string.rep(" ", w))
+
+  mon.setBackgroundColor(colors.gray)
+  mon.setCursorPos(x, y + 1)
+  mon.write(string.rep(" ", w))
+
+  local tx = x + math.floor((w - #text) / 2)
+  mon.setTextColor(colors.black)
   mon.setCursorPos(tx, y + 1)
-  mon.write(label)
+  mon.write(text)
+
+  mon.setBackgroundColor(colors.gray)
+  mon.setCursorPos(x, y + 2)
+  mon.write(string.rep(" ", w))
 
   mon.setBackgroundColor(colors.black)
 end
 
--- ---- Anzeige ---- --
+
+-- Normaler 3D-Button
+local function drawButton3D(x, y, w, text, faceColor, textColor)
+  mon.setBackgroundColor(colors.white)
+  mon.setCursorPos(x, y)
+  mon.write(string.rep(" ", w))
+
+  mon.setBackgroundColor(faceColor)
+  mon.setCursorPos(x, y + 1)
+  mon.write(string.rep(" ", w))
+  mon.setCursorPos(x, y + 2)
+  mon.write(string.rep(" ", w))
+
+  local tx = x + math.floor((w - #text) / 2)
+  mon.setTextColor(textColor)
+  mon.setCursorPos(tx, y + 1)
+  mon.write(text)
+
+  mon.setBackgroundColor(colors.gray)
+  mon.setCursorPos(x, y + 3)
+  mon.write(string.rep(" ", w))
+
+  mon.setBackgroundColor(colors.black)
+end
+
+
+-- „eingedrückter“ Button (invertierter Look)
+local function drawButtonPressed(x, y, w, text, faceColor, textColor)
+  mon.setBackgroundColor(colors.gray)
+  mon.setCursorPos(x, y)
+  mon.write(string.rep(" ", w))
+
+  mon.setBackgroundColor(colors.black)
+  mon.setCursorPos(x, y + 1)
+  mon.write(string.rep(" ", w))
+  mon.setCursorPos(x, y + 2)
+  mon.write(string.rep(" ", w))
+
+  local tx = x + math.floor((w - #text) / 2)
+  mon.setTextColor(textColor)
+  mon.setCursorPos(tx, y + 1)
+  mon.write(text)
+
+  mon.setBackgroundColor(colors.lightGray)
+  mon.setCursorPos(x, y + 3)
+  mon.write(string.rep(" ", w))
+
+  mon.setBackgroundColor(colors.black)
+end
+
+
+-- ===== Bildschirm neu zeichnen ===== --
 
 local function draw()
   mon.clear()
@@ -57,28 +114,42 @@ local function draw()
   mon.setTextColor(colors.cyan)
   mon.write("Beleuchtungssteuerung")
 
-  -- Indirekte Beleuchtung (Orange)
+  -- Indirekte Beleuchtung
+  drawLabel3D(2, 3, 26, "Indirekte Beleuchtung")
+
   if state.orange then
-    drawButton(2, 3, 22, "Indirekte Beleuchtung: AN", colors.green, colors.black)
+    drawButton3D(2, 7, 26, "AN", colors.green, colors.black)
   else
-    drawButton(2, 3, 22, "Indirekte Beleuchtung: AUS", colors.red, colors.white)
+    drawButton3D(2, 7, 26, "AUS", colors.red, colors.white)
   end
 
-  -- Hauptlicht (Weiss)
+  -- Hauptlicht
+  drawLabel3D(2, 12, 26, "Hauptlicht")
+
   if state.white then
-    drawButton(2, 7, 22, "Hauptlicht: AN", colors.green, colors.black)
+    drawButton3D(2, 16, 26, "AN", colors.green, colors.black)
   else
-    drawButton(2, 7, 22, "Hauptlicht: AUS", colors.red, colors.white)
+    drawButton3D(2, 16, 26, "AUS", colors.red, colors.white)
   end
 
-  -- Zentralbutton
+  -- Zentral
+  drawLabel3D(2, 21, 26, "Zentrale Steuerung")
+
   local allOn = state.orange and state.white
-
   if allOn then
-    drawButton(2, 11, 22, "ALLE AUS", colors.blue, colors.white)
+    drawButton3D(2, 25, 26, "ALLE AUS", colors.blue, colors.white)
   else
-    drawButton(2, 11, 22, "ALLE AN", colors.blue, colors.white)
+    drawButton3D(2, 25, 26, "ALLE AN", colors.blue, colors.white)
   end
+end
+
+
+-- ===== Animation + Logik ===== --
+
+local function pressAnimation(x, y, w, text, faceColor, textColor)
+  drawButtonPressed(x, y, w, text, faceColor, textColor)
+  sleep(0.12)
+  draw()
 end
 
 local function setAll(v)
@@ -88,31 +159,45 @@ local function setAll(v)
   draw()
 end
 
+
 draw()
 updateOutput()
 
--- --- Touch-Loop --- --
+
+-- ===== Touch Loop ===== --
+
 while true do
   local e, side, x, y = os.pullEvent("monitor_touch")
 
-  -- Button-Bereiche prüfen
-  -- Indirekte Beleuchtung (2..23 Breite, 3..5 Höhe)
-  if x >= 2 and x <= 23 and y >= 3 and y <= 5 then
+  -- Indirekte Beleuchtung
+  if x >= 2 and x <= 28 and y >= 7 and y <= 10 then
+    pressAnimation(2, 7, 26, state.orange and "AN" or "AUS",
+      state.orange and colors.green or colors.red,
+      state.orange and colors.black or colors.white)
+
     state.orange = not state.orange
     updateOutput()
     draw()
   end
 
-  -- Hauptlicht (2..23, 7..9)
-  if x >= 2 and x <= 23 and y >= 7 and y <= 9 then
+  -- Hauptlicht
+  if x >= 2 and x <= 28 and y >= 16 and y <= 19 then
+    pressAnimation(2, 16, 26, state.white and "AN" or "AUS",
+      state.white and colors.green or colors.red,
+      state.white and colors.black or colors.white)
+
     state.white = not state.white
     updateOutput()
     draw()
   end
 
-  -- Zentral (2..23, 11..13)
-  if x >= 2 and x <= 23 and y >= 11 and y <= 13 then
+  -- Zentrale
+  if x >= 2 and x <= 28 and y >= 25 and y <= 28 then
     local allOn = state.orange and state.white
+
+    pressAnimation(2, 25, 26, allOn and "ALLE AUS" or "ALLE AN",
+      colors.blue, colors.white)
+
     setAll(not allOn)
   end
 end
