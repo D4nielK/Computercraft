@@ -182,7 +182,7 @@ local function drawLeftStatic()
   local ty = LL.C.y + 3
 
   write(monL, tx, ty,     "Status:")
-  write(monL, tx, ty+2,   "Steam/HC:")
+  write(monL, tx, ty+2,   "Steam:")
   write(monL, tx, ty+3,   "Water:")
   write(monL, tx, ty+4,   "Energy:")
 
@@ -287,10 +287,9 @@ local function drawTurbineLive()
 
   local x = LL.C.x + 2
   local y = LL.C.y + 3
-  local valX = x + 11
+  local valX = x + 12
   local valW = LL.C.w - (valX - LL.C.x) - 2
 
-  -- Falls Turbine nicht gefunden
   if not t then
     writePad(monL, valX, y,     "N/A", valW)
     writePad(monL, valX, y+2,   "N/A", valW)
@@ -304,52 +303,60 @@ local function drawTurbineLive()
     return
   end
 
-  -- --- Werte holen (mit Fallback-Namen) ---
-  local active = firstCall(t, {"getActive", "isActive"})
+  -- Werte (genau aus deiner Method-Liste)
+  local formed      = safeCall(t, "isFormed")
+  local prod        = safeCall(t, "getProductionRate")          -- FE/t
+  local maxProd     = safeCall(t, "getMaxProduction")           -- FE/t
+  local steamPct    = safeCall(t, "getSteamFilledPercentage")   -- 0..1 oder 0..100
+  local energyPct   = safeCall(t, "getEnergyFilledPercentage")  -- 0..1 oder 0..100
+  local steamIn     = safeCall(t, "getLastSteamInputRate")      -- mB/t
+  local flow        = safeCall(t, "getFlowRate")                -- (Einheit modabhängig, meist mB/t)
+  local maxFlow     = safeCall(t, "getMaxFlowRate")
+  local dumpMode    = safeCall(t, "getDumpingMode")             -- string/enum
+  local energy      = safeCall(t, "getEnergy")                  -- FE
+  local maxEnergy   = safeCall(t, "getMaxEnergy")               -- FE
+  local maxWaterOut = safeCall(t, "getMaxWaterOutput")          -- meist mB/t (max)
 
-  -- Steam/Heated Coolant in % (je nach Implementation)
-  local steamPct = firstCall(t, {"getSteamFilledPercentage", "getSteamFillPercentage", "getSteamPercent"})
-  local hcPct    = firstCall(t, {"getHeatedCoolantFilledPercentage", "getHeatedCoolantFillPercentage", "getHeatedCoolantPercent"})
-  local steamOrHC = steamPct or hcPct
-
-  -- Water %
-  local waterPct  = firstCall(t, {"getWaterFilledPercentage", "getWaterFillPercentage", "getWaterPercent"})
-
-  -- Energy % (oder aus Stored/Max berechnen)
-  local energyPct = firstCall(t, {"getEnergyFilledPercentage", "getEnergyFillPercentage", "getEnergyPercent"})
-  if not energyPct then
-    local stored = firstCall(t, {"getEnergyStored", "getStoredEnergy"})
-    local cap    = firstCall(t, {"getMaxEnergy", "getEnergyCapacity", "getMaxEnergyStored"})
-    if type(stored)=="number" and type(cap)=="number" and cap > 0 then
-      energyPct = stored / cap
-    end
+  -- Status ableiten: formed + produziert?
+  local status = "N/A"
+  if formed == false then
+    status = "Not formed"
+  elseif type(prod) == "number" then
+    status = (prod > 0) and "Active" or "Idle"
+  else
+    status = "Formed"
   end
 
-  -- Production
-  local maxProd = firstCall(t, {"getMaxProduction", "getMaxProductionRate", "getMaxEnergyProduction"})
-  local prod    = firstCall(t, {"getProductionRate", "getProduction", "getEnergyProducedLastTick"})
+  -- Anzeigen
+  writePad(monL, valX, y,     status, valW)
 
-  -- Rates (mB/t)
-  local steamIn  = firstCall(t, {"getSteamInputRate", "getSteamInput", "getSteamIn"})
-  local waterOut = firstCall(t, {"getWaterOutputRate", "getWaterOutput", "getWaterOut"})
+  -- Steam / Heated Coolant % (bei Turbine ist es Steam)
+  writePad(monL, valX, y+2,   steamPct and pct(steamPct) or "N/A", valW)
 
-  -- Flow rate
-  local flow = firstCall(t, {"getFlowRate", "getFlow", "getFluidFlowRate"})
+  -- Water %: nicht per turbineValve API vorhanden -> zeigen wir N/A
+  writePad(monL, valX, y+3,   "N/A", valW)
 
-  -- --- Anzeigen ---
-  writePad(monL, valX, y,    (active == nil) and "N/A" or (active and "Active" or "Inactive"), valW)
+  -- Energy %
+  writePad(monL, valX, y+4,   energyPct and pct(energyPct) or "N/A", valW)
 
-  writePad(monL, valX, y+2,  (steamOrHC and pct(steamOrHC)) or "N/A", valW)
-  writePad(monL, valX, y+3,  (waterPct and pct(waterPct)) or "N/A", valW)
-  writePad(monL, valX, y+4,  (energyPct and pct(energyPct)) or "N/A", valW)
+  -- Max Production / Production
+  writePad(monL, valX, y+6,   maxProd and (string.format("%.0f FE/t", maxProd)) or "N/A", valW)
+  writePad(monL, valX, y+7,   prod    and (string.format("%.0f FE/t", prod))    or "N/A", valW)
 
-  writePad(monL, valX, y+6,  (maxProd and (string.format("%.0f FE/t", maxProd))) or "N/A", valW)
-  writePad(monL, valX, y+7,  (prod    and (string.format("%.0f FE/t", prod   ))) or "N/A", valW)
+  -- Steam input
+  writePad(monL, valX, y+8,   steamIn and (string.format("%.0f mB/t", steamIn)) or "N/A", valW)
 
-  writePad(monL, valX, y+8,  (steamIn  and (string.format("%.0f mB/t", steamIn ))) or "N/A", valW)
-  writePad(monL, valX, y+9,  (waterOut and (string.format("%.0f mB/t", waterOut))) or "N/A", valW)
-  writePad(monL, valX, y+10, (flow     and (tostring(flow))) or "N/A", valW)
+  -- Water Output: in deiner Liste gibt’s nur MAX, kein aktuelles Out -> zeigen wir max
+  writePad(monL, valX, y+9,   maxWaterOut and (string.format("max %.0f", maxWaterOut)) or "N/A", valW)
+
+  -- Flow + maxFlow (wenn verfügbar)
+  if flow and maxFlow then
+    writePad(monL, valX, y+10, string.format("%.0f/%.0f", flow, maxFlow), valW)
+  else
+    writePad(monL, valX, y+10, flow and tostring(flow) or "N/A", valW)
+  end
 end
+
 
 -- =========================================================
 -- LEFT: MATRIX STATS (live)
