@@ -344,13 +344,13 @@ local function drawTurbineLive()
   writePad(monL, valX+6, y+7,   prod    and (string.format("%.0fFE/t", prod))    or "N/A", valW-6)
 
   -- Steam input
-writePad(monL, valX, y+8, steamIn and (string.format("%.0f mB/t", steamIn)) or "N/A", valW)
+writePad(monL, valX+6, y+8, steamIn and (string.format("%.0fmB/t", steamIn)) or "N/A", valW-6)
 
 -- Max Flow
-writePad(monL, valX, y+9, maxFlow and (string.format("%.0f mB/t", maxFlow)) or "N/A", valW)
+writePad(monL, valX, y+9, maxFlow and (string.format("%.0fmB/t", maxFlow)) or "N/A", valW)
 
 -- Current Flow
-writePad(monL, valX, y+10, flow and (string.format("%.0f mB/t", flow)) or "N/A", valW)
+writePad(monL, valX+6, y+10, flow and (string.format("%.0fmB/t", flow)) or "N/A", valW-6)
 
 end
 
