@@ -1,24 +1,24 @@
 ---@diagnostic disable: undefined-global
 
 -- =========================================================
--- CONFIG (HIER ANPASSEN!)
+-- CONFIG
 -- =========================================================
 local CFG = {
-  LEFT_MONITOR  = "left",  -- ← HIER linker Monitor
-  RIGHT_MONITOR = "right",  -- ← HIER rechter Monitor
+  LEFT_MONITOR  = "left",
+  RIGHT_MONITOR = "right",
 
   TEXT_SCALE_LEFT  = 1.0,
   TEXT_SCALE_RIGHT = 1.0,
 
   REFRESH = 0.5,
 
-  REACTOR = "fissionReactorLogicAdapter_0",
+  -- Reactor: lieber auto-find, damit Ab-/Aufbauen nicht alles kaputt macht
+  -- Falls du unbedingt fest willst: setz hier den Namen und ersetze peripheral.find unten wieder mit wrap()
+  REACTOR_TYPE = "fissionReactorLogicAdapter",
 
-  -- Manuelle Reactor-Map (x = Fuel, o = Water)
-  manualMap = {
-    ["2:2"]="x", ["4:2"]="x", ["3:3"]="x", ["2:4"]="x", ["4:4"]="x",
-    ["3:2"]="o", ["2:3"]="o", ["4:3"]="o", ["3:4"]="o",
-  },
+  -- Optional: wenn du Namen kennst, kannst du sie hier fest eintragen.
+  TURBINE_NAME = nil,  -- z.B. "turbineValve_0"
+  MATRIX_NAME  = nil,  -- z.B. "inductionPort_0"
 }
 
 -- =========================================================
@@ -26,27 +26,35 @@ local CFG = {
 -- =========================================================
 local monL = assert(peripheral.wrap(CFG.LEFT_MONITOR),  "Left monitor not found")
 local monR = assert(peripheral.wrap(CFG.RIGHT_MONITOR), "Right monitor not found")
-local r    = assert(peripheral.wrap(CFG.REACTOR), "Reactor not found")
 
 monL.setTextScale(CFG.TEXT_SCALE_LEFT)
 monR.setTextScale(CFG.TEXT_SCALE_RIGHT)
 
+local r = peripheral.find(CFG.REACTOR_TYPE)
+assert(r, "Reactor not found (no "..CFG.REACTOR_TYPE.." peripheral)")
+
+local t = (CFG.TURBINE_NAME and peripheral.wrap(CFG.TURBINE_NAME)) or peripheral.find("turbineValve")
+-- t kann nil sein -> dann zeigen wir N/A
+
+local mtx = (CFG.MATRIX_NAME and peripheral.wrap(CFG.MATRIX_NAME)) or peripheral.find("inductionPort")
+-- mtx kann nil sein -> dann zeigen wir N/A
+
 -- =========================================================
--- UI HELPERS (GLOBAL, STABIL)
+-- UI HELPERS
 -- =========================================================
-function clear(m)
+local function clear(m)
   m.setBackgroundColor(colors.black)
   m.setTextColor(colors.white)
   m.clear()
   m.setCursorPos(1,1)
 end
 
-function write(m,x,y,t)
+local function write(m,x,y,t)
   m.setCursorPos(x,y)
   m.write(t)
 end
 
-function fill(m, x,y,w,h, bgc)
+local function fill(m, x,y,w,h, bgc)
   m.setBackgroundColor(bgc)
   for yy=y, y+h-1 do
     m.setCursorPos(x,yy)
@@ -54,7 +62,7 @@ function fill(m, x,y,w,h, bgc)
   end
 end
 
-function panel(m, x,y,w,h, title)
+local function panel(m, x,y,w,h, title)
   fill(m, x,y,w,h, colors.white)
   m.setBackgroundColor(colors.white)
   m.setTextColor(colors.black)
@@ -64,45 +72,67 @@ function panel(m, x,y,w,h, title)
   end
 end
 
+-- schreibt und überschreibt Rest der Zeile -> keine "Reste" im UI
+local function writePad(m, x, y, s, w)
+  m.setCursorPos(x, y)
+  local t = tostring(s)
+  if #t > w then t = t:sub(1, w) end
+  m.write(t .. string.rep(" ", math.max(0, w - #t)))
+end
+
 local function pct(v)
-  if type(v)~="number" then return "?" end
+  if type(v)~="number" then return "N/A" end
   if v<=1.001 then v=v*100 end
   return string.format("%3.0f%%", v)
 end
 
--- =========================================================
--- LEFT MONITOR LAYOUT
--- =========================================================
+local function safeCall(obj, fn)
+  if not obj or type(obj[fn]) ~= "function" then return nil end
+  local ok, res = pcall(obj[fn], obj)
+  if ok then return res end
+  return nil
+end
 
+local function to01(v)
+  if type(v)~="number" then return 0 end
+  if v > 1.001 then v = v/100 end
+  if v < 0 then v=0 end
+  if v > 1 then v=1 end
+  return v
+end
+
+-- =========================================================
+-- LEFT MONITOR LAYOUT  (NEU)
+-- =========================================================
 local function leftLayout()
   local W,H = monL.getSize()
 
-  -- FEINTUNING
   local leftMargin  = 2
+  local topY        = 4
   local gap         = 2
   local rightMargin = 2
+  local bottomMargin= 2
 
-  -- linke Spalte bewusst schmal
-  local lxW = 25     -- <<< DAS ist der wichtigste Wert
+  local leftW  = 28 -- <- hier kannst du Breite links steuern
+  local rightW = W - leftMargin - leftW - gap - rightMargin
 
-  -- rechte Spalte bekommt den Rest, aber nicht bis zum Rand
-  local rxW = W - leftMargin - lxW - gap - rightMargin
+  local statsH  = 18
+  local levelsH = 18
+
+  local rightH = H - topY - bottomMargin
+  local turbH  = math.floor(rightH * 0.45)
+  local matH   = rightH - turbH - gap
 
   return {
-    -- Linke Spalte (Layout + Levels)
-    A = {x=leftMargin, y=4,  w=lxW, h=14},
-    D = {x=leftMargin, y=19, w=lxW, h=16},
-
-    -- Rechte Spalte (Stats), rückt sichtbar nach links
-    B = {
-      x = leftMargin + lxW + gap,
-      y = 4,
-      w = rxW,
-      h = 32
-    },
+    W=W, H=H,
+    -- LINKS
+    B = { x=leftMargin, y=topY,             w=leftW,  h=statsH  }, -- Reactor Stats
+    D = { x=leftMargin, y=topY+statsH+gap,  w=leftW,  h=levelsH }, -- Reactor Levels
+    -- RECHTS
+    C = { x=leftMargin+leftW+gap, y=topY,            w=rightW, h=turbH }, -- Turbine
+    E = { x=leftMargin+leftW+gap, y=topY+turbH+gap,  w=rightW, h=matH  }, -- Matrix
   }
 end
-
 
 local LL = leftLayout()
 
@@ -110,101 +140,52 @@ local LL = leftLayout()
 -- LEFT: STATIC DRAW
 -- =========================================================
 local function drawLeftStatic()
-  local W, H = monL.getSize()
+  local W,_ = monL.getSize()
   clear(monL)
 
-  -- Titel
   write(monL, math.floor(W/2)-6, 1, "REACTOR UI")
   write(monL, math.floor(W/2)-6, 2, "==========")
 
-  panel(monL, LL.A.x, LL.A.y, LL.A.w, LL.A.h, "Reactor Layout")
-  panel(monL, LL.D.x, LL.D.y, LL.D.w, LL.D.h, "Reactor Levels")
   panel(monL, LL.B.x, LL.B.y, LL.B.w, LL.B.h, "Reactor Stats")
+  panel(monL, LL.D.x, LL.D.y, LL.D.w, LL.D.h, "Reactor Levels")
+  panel(monL, LL.C.x, LL.C.y, LL.C.w, LL.C.h, "Turbine")
+  panel(monL, LL.E.x, LL.E.y, LL.E.w, LL.E.h, "Matrix")
 
-  -- Stats-Labels (statisch)
+  -- Reactor Stats labels
   monL.setBackgroundColor(colors.white)
   monL.setTextColor(colors.black)
 
   local x = LL.B.x + 2
   local y = LL.B.y + 3
+
   write(monL, x, y,     "Status:")
   write(monL, x, y+2,   "Coolant:")
   write(monL, x, y+3,   "Fuel:")
   write(monL, x, y+4,   "Heated:")
   write(monL, x, y+5,   "Waste:")
-
-  write(monL, x, y+7,   "Max Burnrate:")
-  write(monL, x, y+8,   "Burnrate:")
-  write(monL, x, y+9,   "Temperature")
+  write(monL, x, y+7,   "Max Burn:")
+  write(monL, x, y+8,   "Burn:")
+  write(monL, x, y+9,   "Temp:")
   write(monL, x, y+10,  "Damage:")
+
+  -- Turbine labels (kompakt)
+  local tx = LL.C.x + 2
+  local ty = LL.C.y + 3
+  write(monL, tx, ty,     "Active:")
+  write(monL, tx, ty+2,   "Steam:")
+  write(monL, tx, ty+3,   "Energy:")
+  write(monL, tx, ty+4,   "Prod:")
+
+  -- Matrix labels
+  local mx = LL.E.x + 2
+  local my = LL.E.y + 3
+  write(monL, mx, my,     "Stored:")
+  write(monL, mx, my+2,   "Input:")
+  write(monL, mx, my+3,   "Output:")
 end
 
 -- =========================================================
--- LEFT: REACTOR LAYOUT (einmal, kein Flackern)
--- =========================================================
-local function drawCell(x,y,mark)
-  monL.setBackgroundColor(colors.white)
-
-  monL.setTextColor(colors.black); write(monL,x,y,"[")
-  if mark=="x" then
-    monL.setTextColor(colors.green); write(monL,x+1,y,"x")
-  elseif mark=="o" then
-    monL.setTextColor(colors.blue); write(monL,x+1,y,"o")
-  else
-    monL.setTextColor(colors.black); write(monL,x+1,y," ")
-  end
-  monL.setTextColor(colors.black); write(monL,x+2,y,"]")
-end
-
-local function drawReactorLayoutOnce()
-  -- Innenbereich leeren
-  fill(monL, LL.A.x+1, LL.A.y+2, LL.A.w-2, LL.A.h-3, colors.white)
-  monL.setBackgroundColor(colors.white)
-  monL.setTextColor(colors.black)
-
-  local x0 = LL.A.x + 2
-  local y0 = LL.A.y + 3
-
-  local formed = (r.isFormed and r.isFormed()) or false
-  write(monL, x0, y0, "Formed: "..tostring(formed))
-  if not formed then
-    write(monL, x0, y0+1, "Not formed!")
-    return
-  end
-
-  local rw, rl, rh = r.getWidth(), r.getLength(), r.getHeight()
-  write(monL, x0, y0+1, ("Size: %dx%dx%d"):format(rw, rl, rh))
-  write(monL, x0, y0+2, "x=Fuel")
-  write(monL, x0, y0+3, "o=Water")
-
-  local gx = LL.A.x + 2
-  local gy = LL.A.y + 6
-
-  local cellW = 3
-  local gw = LL.A.w - 4
-  local gh = LL.A.h - 8
-
-  local maxCols = math.max(1, math.floor(gw / cellW))
-  local maxRows = math.max(1, gh)
-
-  local stepX = math.max(1, math.ceil(rw / maxCols))
-  local stepY = math.max(1, math.ceil(rl / maxRows))
-
-  local cols = math.min(maxCols, math.ceil(rw / stepX))
-  local rows = math.min(maxRows, math.ceil(rl / stepY))
-
-  for sy=0, rows-1 do
-    for sx=0, cols-1 do
-      local rx = 1 + sx*stepX
-      local rz = 1 + sy*stepY
-      local key = rx..":"..rz
-      drawCell(gx + sx*cellW, gy + sy, CFG.manualMap[key])
-    end
-  end
-end
-
--- =========================================================
--- LEFT: LEVELS (live, ohne Panel neu)
+-- LEFT: LEVELS (live)
 -- =========================================================
 local function drawBar(x,y,w,h, frac, col, label)
   -- Container
@@ -227,16 +208,7 @@ local function drawBar(x,y,w,h, frac, col, label)
   write(monL, x, y-1, label)
 end
 
-local function to01(v)
-  if type(v)~="number" then return 0 end
-  if v > 1.001 then v = v/100 end
-  if v < 0 then v=0 end
-  if v > 1 then v=1 end
-  return v
-end
-
 local function drawLevelsLive()
-  -- wir löschen NICHT das ganze Panel, nur malen Balken neu
   local x0 = LL.D.x + 1
   local y0 = LL.D.y + 4
   local barH = LL.D.h - 7
@@ -263,7 +235,7 @@ local function drawLevelsLive()
 end
 
 -- =========================================================
--- LEFT: STATS (live)
+-- LEFT: REACTOR STATS (live)
 -- =========================================================
 local function drawStatsLive()
   monL.setBackgroundColor(colors.white)
@@ -272,22 +244,84 @@ local function drawStatsLive()
   local x = LL.B.x + 2
   local y = LL.B.y + 3
 
-  -- Werte schreiben (rechte Spalte in diesem Panel)
-  write(monL, x+18, y,     (r.getStatus() and "ON " or "OFF"))
-  write(monL, x+18, y+2,   pct(r.getCoolantFilledPercentage()))
-  write(monL, x+18, y+3,   pct(r.getFuelFilledPercentage()))
-  write(monL, x+18, y+4,   pct(r.getHeatedCoolantFilledPercentage()))
-  write(monL, x+18, y+5,   pct(r.getWasteFilledPercentage()))
+  local valX = x + 14
+  local valW = LL.B.w - (valX - LL.B.x) - 2
 
-  write(monL, x+17, y+7,   string.format("%4.0fmB/t", r.getMaxBurnRate()))
-  write(monL, x+17, y+8,   string.format("%4.1fmB/t", r.getBurnRate()))
-  write(monL, x+17, y+9,   string.format("%4.0fK", r.getTemperature()))
-  write(monL, x+18, y+10,   pct(r.getDamagePercent()))
+  writePad(monL, valX, y,     (r.getStatus() and "ON" or "OFF"), valW)
+  writePad(monL, valX, y+2,   pct(r.getCoolantFilledPercentage()), valW)
+  writePad(monL, valX, y+3,   pct(r.getFuelFilledPercentage()), valW)
+  writePad(monL, valX, y+4,   pct(r.getHeatedCoolantFilledPercentage()), valW)
+  writePad(monL, valX, y+5,   pct(r.getWasteFilledPercentage()), valW)
 
+  local maxBurn = safeCall(r, "getMaxBurnRate")
+  writePad(monL, valX, y+7,   (maxBurn and string.format("%.1f mB/t", maxBurn) or "N/A"), valW)
+  writePad(monL, valX, y+8,   string.format("%.1f mB/t", (safeCall(r,"getBurnRate") or 0)), valW)
+  writePad(monL, valX, y+9,   string.format("%.0f K", (safeCall(r,"getTemperature") or 0)), valW)
+  writePad(monL, valX, y+10,  pct(safeCall(r,"getDamagePercent")), valW)
 end
 
 -- =========================================================
--- RIGHT MONITOR: CONTROLS (wie vorher)
+-- LEFT: TURBINE STATS (live)
+-- =========================================================
+local function drawTurbineLive()
+  monL.setBackgroundColor(colors.white)
+  monL.setTextColor(colors.black)
+
+  local x = LL.C.x + 2
+  local y = LL.C.y + 3
+  local valX = x + 10
+  local valW = LL.C.w - (valX - LL.C.x) - 2
+
+  if not t then
+    writePad(monL, valX, y,   "N/A", valW)
+    writePad(monL, valX, y+2, "N/A", valW)
+    writePad(monL, valX, y+3, "N/A", valW)
+    writePad(monL, valX, y+4, "N/A", valW)
+    return
+  end
+
+  local active = safeCall(t, "getActive")
+  local steamP = safeCall(t, "getSteamFilledPercentage")
+  local energy = safeCall(t, "getEnergyStored")
+  local prod   = safeCall(t, "getProductionRate")
+
+  writePad(monL, valX, y,   tostring(active), valW)
+  writePad(monL, valX, y+2, steamP and pct(steamP) or "N/A", valW)
+  writePad(monL, valX, y+3, energy and tostring(energy) or "N/A", valW)
+  writePad(monL, valX, y+4, prod and (tostring(prod).." FE/t") or "N/A", valW)
+end
+
+-- =========================================================
+-- LEFT: MATRIX STATS (live)
+-- =========================================================
+local function drawMatrixLive()
+  monL.setBackgroundColor(colors.white)
+  monL.setTextColor(colors.black)
+
+  local x = LL.E.x + 2
+  local y = LL.E.y + 3
+  local valX = x + 10
+  local valW = LL.E.w - (valX - LL.E.x) - 2
+
+  if not mtx then
+    writePad(monL, valX, y,   "N/A", valW)
+    writePad(monL, valX, y+2, "N/A", valW)
+    writePad(monL, valX, y+3, "N/A", valW)
+    return
+  end
+
+  -- Namen können je nach Mod/Bridge variieren -> wir probieren mehrere
+  local stored = safeCall(mtx, "getEnergyStored") or safeCall(mtx, "getStored") or safeCall(mtx, "getStoredEnergy")
+  local input  = safeCall(mtx, "getLastInput")    or safeCall(mtx, "getInput")  or safeCall(mtx, "getInputRate")
+  local output = safeCall(mtx, "getLastOutput")   or safeCall(mtx, "getOutput") or safeCall(mtx, "getOutputRate")
+
+  writePad(monL, valX, y,   stored and tostring(stored) or "N/A", valW)
+  writePad(monL, valX, y+2, input  and (tostring(input).." FE/t")  or "N/A", valW)
+  writePad(monL, valX, y+3, output and (tostring(output).." FE/t") or "N/A", valW)
+end
+
+-- =========================================================
+-- RIGHT MONITOR: CONTROLS
 -- =========================================================
 local buttons = {}
 
@@ -305,12 +339,12 @@ end
 
 local function drawRightStatic()
   clear(monR)
-  local W,H = monR.getSize()
+  local W,_ = monR.getSize()
 
   write(monR, math.floor(W/2)-6, 1, "CONTROLS")
   write(monR, math.floor(W/2)-6, 2, "==========")
 
-  panel(monR, 2,4, W-2, H-5, "Actions")
+  panel(monR, 2,4, W-2, 18, "Actions")
 
   buttons = {}
   local x = 4
@@ -322,6 +356,9 @@ local function drawRightStatic()
   drawButton("start", x,y,         w,h, "START", colors.green)
   drawButton("stop",  x,y+h+g,     w,h, "STOP",  colors.red)
   drawButton("scram", x,y+2*(h+g), w,h, "AZ-5",  colors.orange)
+
+  -- Platz für Settings später:
+  panel(monR, 2, 23, W-2, 20, "Settings (later)")
 end
 
 local function hit(x,y)
@@ -347,11 +384,12 @@ end
 -- =========================================================
 drawLeftStatic()
 drawRightStatic()
-drawReactorLayoutOnce() -- Layout einmal (kein Flackern)
 
 while true do
-  drawLevelsLive()
   drawStatsLive()
+  drawLevelsLive()
+  drawTurbineLive()
+  drawMatrixLive()
 
   local e,side,x,y = os.pullEventTimeout("monitor_touch", CFG.REFRESH)
   if e=="monitor_touch" and side==CFG.RIGHT_MONITOR then
