@@ -109,7 +109,7 @@ local function leftLayout()
 
   local leftMargin  = 2
   local topY        = 4
-  local gap         = 2
+  local gap         = 1
   local rightMargin = 2
   local bottomMargin= 2
 
