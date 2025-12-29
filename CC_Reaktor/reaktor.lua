@@ -98,10 +98,10 @@ local function fmtFE(v, perTick)
   if type(v) ~= "number" then return "N/A" end
   local suf = perTick and " FE/t" or " FE"
   local a = math.abs(v)
-  if a >= 1e12 then return string.format("%.2f T%s", v/1e12, suf) end
-  if a >= 1e9  then return string.format("%.2f G%s", v/1e9,  suf) end
-  if a >= 1e6  then return string.format("%.2f M%s", v/1e6,  suf) end
-  if a >= 1e3  then return string.format("%.2f k%s", v/1e3,  suf) end
+  if a >= 1e12 then return string.format(".2f Ts", v/1e12, suf) end
+  if a >= 1e9  then return string.format(".2f Gs", v/1e9,  suf) end
+  if a >= 1e6  then return string.format(".2f Ms", v/1e6,  suf) end
+  if a >= 1e3  then return string.format(".2f ks", v/1e3,  suf) end
   return string.format("%.0f%s", v, suf)
 end
 
