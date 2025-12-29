@@ -17,8 +17,8 @@ local CFG = {
   REACTOR_TYPE = "fissionReactorLogicAdapter",
 
   -- Optional: wenn du Namen kennst, kannst du sie hier fest eintragen.
-  TURBINE_NAME = nil,  -- z.B. "turbineValve_0"
-  MATRIX_NAME  = nil,  -- z.B. "inductionPort_0"
+  TURBINE_NAME = turbineValve_0,  -- z.B. "turbineValve_0"
+  MATRIX_NAME  = inductionPort_0,  -- z.B. "inductionPort_0"
 }
 
 -- =========================================================
@@ -197,9 +197,11 @@ local function drawLeftStatic()
   -- Matrix labels
   local mx = LL.E.x + 2
   local my = LL.E.y + 3
-  write(monL, mx, my,     "Stored:")
+  write(monL, mx, my,     "Max Energy")
+  write(monL, mx, my+1,   "Stored:")
   write(monL, mx, my+2,   "Input:")
   write(monL, mx, my+3,   "Output:")
+  write(monL, mx, my+4,   "Change")
 end
 
 -- =========================================================
@@ -262,7 +264,7 @@ local function drawStatsLive()
   local x = LL.B.x + 2
   local y = LL.B.y + 3
 
-  local valX = x + 14
+  local valX = x + 12
   local valW = LL.B.w - (valX - LL.B.x) - 2
 
   writePad(monL, valX, y,     (r.getStatus() and "ON" or "OFF"), valW)
@@ -364,25 +366,23 @@ local function drawMatrixLive()
 
   local x = LL.E.x + 2
   local y = LL.E.y + 3
-  local valX = x + 10
+
+  local valX = x + 10      -- Werte-Spalte (wenn du es mehr rechts willst: 11/12)
   local valW = LL.E.w - (valX - LL.E.x) - 2
 
-  if not mtx then
-    writePad(monL, valX, y,   "N/A", valW)
-    writePad(monL, valX, y+2, "N/A", valW)
-    writePad(monL, valX, y+3, "N/A", valW)
-    return
-  end
+  local cap    = m.getMaxEnergy()
+  local stored = m.getEnergy()
+  local input  = m.getLastInput()
+  local output = m.getLastOutput()
+  local change = input - output
 
-  -- Namen können je nach Mod/Bridge variieren -> wir probieren mehrere
-  local stored = safeCall(mtx, "getEnergyStored") or safeCall(mtx, "getStored") or safeCall(mtx, "getStoredEnergy")
-  local input  = safeCall(mtx, "getLastInput")    or safeCall(mtx, "getInput")  or safeCall(mtx, "getInputRate")
-  local output = safeCall(mtx, "getLastOutput")   or safeCall(mtx, "getOutput") or safeCall(mtx, "getOutputRate")
-
-  writePad(monL, valX, y,   stored and tostring(stored) or "N/A", valW)
-  writePad(monL, valX, y+2, input  and (tostring(input).." FE/t")  or "N/A", valW)
-  writePad(monL, valX, y+3, output and (tostring(output).." FE/t") or "N/A", valW)
+  writePad(monL, valX, y,     fmtFE(cap, false),    valW)
+  writePad(monL, valX, y+2,   fmtFE(stored, false), valW)
+  writePad(monL, valX, y+4,   fmtFE(input, true),   valW)
+  writePad(monL, valX, y+5,   fmtFE(output, true),  valW)
+  writePad(monL, valX, y+7,   fmtFE(change, true),  valW)
 end
+
 
 -- =========================================================
 -- RIGHT MONITOR: CONTROLS
