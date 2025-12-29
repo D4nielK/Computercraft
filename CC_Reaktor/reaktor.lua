@@ -98,10 +98,10 @@ local function fmtFE(v, perTick)
   if type(v) ~= "number" then return "N/A" end
   local suf = perTick and " FE/t" or " FE"
   local a = math.abs(v)
-  if a >= 1e12 then return string.format("%.2fTs", v/1e12, suf) end
-  if a >= 1e9  then return string.format("%.2fGs", v/1e9,  suf) end
-  if a >= 1e6  then return string.format("%.2fMs", v/1e6,  suf) end
-  if a >= 1e3  then return string.format("%.2fks", v/1e3,  suf) end
+  if a >= 1e12 then return string.format("%.2f%Ts", v/1e12, suf) end
+  if a >= 1e9  then return string.format("%.2f%Gs", v/1e9,  suf) end
+  if a >= 1e6  then return string.format("%.2f%Ms", v/1e6,  suf) end
+  if a >= 1e3  then return string.format("%.2f%ks", v/1e3,  suf) end
   return string.format("%.0f%s", v, suf)
 end
 
@@ -405,11 +405,11 @@ local function drawMatrixLive()
   local change = (type(input)=="number" and type(output)=="number") and (input - output) or nil
 
 
-  writePad(monL, valX, y,     fmtFE(cap, false),    valW)
-  writePad(monL, valX, y+2,   fmtFE(stored, false), valW)
-  writePad(monL, valX, y+4,   fmtFE(input, true),   valW)
-  writePad(monL, valX, y+5,   fmtFE(output, true),  valW)
-  writePad(monL, valX, y+7,   fmtFE(change, true),  valW)
+  writePad(monL, valX+8, y,     fmtFE(cap, false),    valW-8)
+  writePad(monL, valX+8, y+2,   fmtFE(stored, false), valW-8)
+  writePad(monL, valX+8, y+4,   fmtFE(input, true),   valW-8)
+  writePad(monL, valX+8, y+5,   fmtFE(output, true),  valW-8)
+  writePad(monL, valX+8, y+7,   fmtFE(change, true),  valW-8)
 end
 
 
