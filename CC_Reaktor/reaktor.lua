@@ -133,9 +133,10 @@ local function drawLeftStatic()
   write(monL, x, y+4,   "Heated:")
   write(monL, x, y+5,   "Waste:")
 
-  write(monL, x, y+7,   "Temp:")
-  write(monL, x, y+8,   "Burn:")
-  write(monL, x, y+9,   "Damage:")
+  write(monL, x, y+7,   "Max Burnrate:")
+  write(monL, x, y+8,   "Burnrate:")
+  write(monL, x, y+9,   "Temperature")
+  write(monL, x, y+10,  "Damage:")
 end
 
 -- =========================================================
@@ -278,9 +279,10 @@ local function drawStatsLive()
   write(monL, x+10, y+4,   pct(r.getHeatedCoolantFilledPercentage()))
   write(monL, x+10, y+5,   pct(r.getWasteFilledPercentage()))
 
-  write(monL, x+10, y+7,   string.format("%4.0f K", r.getTemperature()))
-  write(monL, x+10, y+8,   string.format("%4.1f mB/t", r.getBurnRate()))
-  write(monL, x+10, y+9,   pct(r.getDamagePercent()))
+  write(monL, x+9, y+7,   string.format("%4.0f mB/t", r.getMaxBurnRate()))
+  write(monL, x+9, y+8,   string.format("%4.1f mB/t", r.getBurnRate()))
+  write(monL, x+9, y+9,   string.format("%4.0f K", r.getTemperature()))
+  write(monL, x+9, y+10,   pct(r.getDamagePercent()))
 
 end
 
