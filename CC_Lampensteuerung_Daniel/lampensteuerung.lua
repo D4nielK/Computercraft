@@ -66,12 +66,9 @@ local function drawAll()
   clear()
 
   local w, h = mon.getSize()
-
-  -- Dynamische Button-Größe
   local btnW = math.max(14, math.floor(w * 0.7))
   local btnH = 5
   local spacing = 2
-
   local top = 2
   local x = centerX(w, btnW)
 
@@ -80,15 +77,7 @@ local function drawAll()
   drawButton(x, top + btnH + spacing, btnW, btnH, "Hauptlicht", state.white, false)
 
   -- Zentral-Button
-  drawButton(
-    x,
-    top + (btnH + spacing) * 2,
-    btnW,
-    btnH,
-    "Alles EIN/AUS",
-    (state.orange or state.white),
-    false
-  )
+  drawButton(x, top + (btnH + spacing) * 2, btnW, btnH, "Alles EIN/AUS", (state.orange or state.white), false)
 
   return {
     orange = {x = x, y = top, w = btnW, h = btnH},
@@ -103,10 +92,15 @@ local function inButton(btn, cx, cy)
      and cy >= btn.y and cy <= btn.y + btn.h - 1
 end
 
--- Button-Sound abspielen
-local function playButtonSound()
-  if speaker then
-    speaker.playSound("minecraft:block.note_block.harp", 1, 1) -- Lautstärke=1, Tonhöhe=1
+-- ======= BUTTON SOUNDS =======
+local function playButtonSound(type)
+  if not speaker then return end
+  if type == "orange" then
+    speaker.playSound("minecraft:block.note_block.harp", 1, 1)
+  elseif type == "white" then
+    speaker.playSound("minecraft:block.note_block.bell", 1, 1)
+  elseif type == "all" then
+    speaker.playSound("minecraft:block.note_block.pling", 1, 1)
   end
 end
 
@@ -121,25 +115,22 @@ while true do
   local pressed
   if inButton(buttons.orange, x, y) then
     pressed = buttons.orange
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h,
-      "Indirekte Beleuchtung", state.orange, true)
-    playButtonSound()
+    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Indirekte Beleuchtung", state.orange, true)
+    playButtonSound("orange")
     sleep(0.1)
     state.orange = not state.orange
 
   elseif inButton(buttons.white, x, y) then
     pressed = buttons.white
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h,
-      "Hauptlicht", state.white, true)
-    playButtonSound()
+    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Hauptlicht", state.white, true)
+    playButtonSound("white")
     sleep(0.1)
     state.white = not state.white
 
   elseif inButton(buttons.all, x, y) then
     pressed = buttons.all
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h,
-      "Alles EIN/AUS", (state.orange or state.white), true)
-    playButtonSound()
+    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Alles EIN/AUS", (state.orange or state.white), true)
+    playButtonSound("all")
     sleep(0.1)
     local new = not (state.orange or state.white)
     state.orange = new
