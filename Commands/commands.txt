@@ -22,7 +22,7 @@ local files = { "lampensteuerung.lua", }
 
 //load
 local url = "https://raw.githubusercontent.com/D4nielK/Computercraft/main/CC_Energiematrix/matrix.lua"
-local url = "https://raw.githubusercontent.com/D4nielK/Computercraft/main/CC_Lampensteuerung_Daniel/lampensteuerung.lua"
+
 
 
 
