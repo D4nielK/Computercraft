@@ -273,16 +273,16 @@ local function drawStatsLive()
   local y = LL.B.y + 3
 
   -- Werte schreiben (rechte Spalte in diesem Panel)
-  write(monL, x+10, y,     (r.getStatus() and "ON " or "OFF"))
-  write(monL, x+10, y+2,   pct(r.getCoolantFilledPercentage()))
-  write(monL, x+10, y+3,   pct(r.getFuelFilledPercentage()))
-  write(monL, x+10, y+4,   pct(r.getHeatedCoolantFilledPercentage()))
-  write(monL, x+10, y+5,   pct(r.getWasteFilledPercentage()))
+  write(monL, x+18, y,     (r.getStatus() and "ON " or "OFF"))
+  write(monL, x+18, y+2,   pct(r.getCoolantFilledPercentage()))
+  write(monL, x+18, y+3,   pct(r.getFuelFilledPercentage()))
+  write(monL, x+18, y+4,   pct(r.getHeatedCoolantFilledPercentage()))
+  write(monL, x+18, y+5,   pct(r.getWasteFilledPercentage()))
 
-  write(monL, x+9, y+7,   string.format("%4.0f mB/t", r.getMaxBurnRate()))
-  write(monL, x+9, y+8,   string.format("%4.1f mB/t", r.getBurnRate()))
-  write(monL, x+9, y+9,   string.format("%4.0f K", r.getTemperature()))
-  write(monL, x+9, y+10,   pct(r.getDamagePercent()))
+  write(monL, x+18, y+7,   string.format("%4.0f mB/t", r.getMaxBurnRate()))
+  write(monL, x+18, y+8,   string.format("%4.1f mB/t", r.getBurnRate()))
+  write(monL, x+18, y+9,   string.format("%4.0f K", r.getTemperature()))
+  write(monL, x+18, y+10,   pct(r.getDamagePercent()))
 
 end
 
