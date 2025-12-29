@@ -86,9 +86,9 @@ local function pct(v)
   return string.format("%3.0f%%", v)
 end
 
-local function safeCall(obj, fn)
+local function safeCall(obj, fn, ...)
   if not obj or type(obj[fn]) ~= "function" then return nil end
-  local ok, res = pcall(obj[fn], obj)
+  local ok, res = pcall(obj[fn], ...)
   if ok then return res end
   return nil
 end
