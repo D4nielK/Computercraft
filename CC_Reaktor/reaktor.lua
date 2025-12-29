@@ -190,7 +190,7 @@ local function drawLeftStatic()
   write(monL, tx, ty+7,   "Prod:")
 
   write(monL, tx, ty+8,   "Steam In:")
-  write(monL, tx, ty+9,   "Water Out:")
+  write(monL, tx, ty+9,   "Max Flow:")
   write(monL, tx, ty+10,  "Flow:")
 
 
@@ -344,17 +344,14 @@ local function drawTurbineLive()
   writePad(monL, valX+6, y+7,   prod    and (string.format("%.0fFE/t", prod))    or "N/A", valW-6)
 
   -- Steam input
-  writePad(monL, valX+6, y+8,   steamIn and (string.format("%.0fmB/t", steamIn)) or "N/A", valW-6)
+writePad(monL, valX, y+8, steamIn and (string.format("%.0f mB/t", steamIn)) or "N/A", valW)
 
-  -- Water Output: in deiner Liste gibt’s nur MAX, kein aktuelles Out -> zeigen wir max
-  writePad(monL, valX, y+9,   maxWaterOut and (string.format("%.0fmax", maxWaterOut)) or "N/A", valW)
+-- Max Flow
+writePad(monL, valX, y+9, maxFlow and (string.format("%.0f mB/t", maxFlow)) or "N/A", valW)
 
-  -- Flow + maxFlow (wenn verfügbar)
-  if flow and maxFlow then
-    writePad(monL, valX, y+10, string.format("%.0f/%.0f", flow, maxFlow), valW)
-  else
-    writePad(monL, valX, y+10, flow and tostring(flow) or "N/A", valW)
-  end
+-- Current Flow
+writePad(monL, valX, y+10, flow and (string.format("%.0f mB/t", flow)) or "N/A", valW)
+
 end
 
 
