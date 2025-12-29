@@ -239,7 +239,7 @@ local function drawLevelsLive()
   local x0 = LL.D.x + 2
   local y0 = LL.D.y + 4
   local barH = LL.D.h - 7
-  local barW, gap = 2, 2
+  local barW, gap = 3, 2
 
   local c = to01(r.getCoolantFilledPercentage())
   local f = to01(r.getFuelFilledPercentage())
