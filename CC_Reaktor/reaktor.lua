@@ -156,7 +156,7 @@ local function leftLayout()
   local leftW  = 28 -- <- hier kannst du Breite links steuern
   local rightW = W - leftMargin - leftW - gap - rightMargin
 
-  local statsH  = 15
+  local statsH  = 19
   local levelsH = 18
 
   local rightH = H - topY - bottomMargin
