@@ -230,9 +230,10 @@ local function drawLeftStatic()
   local my = LL.E.y + 3
   write(monL, mx, my,     "Max Energy")
   write(monL, mx, my+1,   "Stored:")
-  write(monL, mx, my+2,   "Input:")
-  write(monL, mx, my+3,   "Output:")
-  write(monL, mx, my+4,   "Change")
+  write(monL, mx, my+2,   "Stored %:")
+  write(monL, mx, my+3,   "Input:")
+  write(monL, mx, my+4,   "Output:")
+  write(monL, mx, my+5,   "Change")
 end
 
 -- =========================================================
@@ -415,9 +416,12 @@ local function drawMatrixLive()
   local output = J_to_FE(outputJ)
   local change = (type(input)=="number" and type(output)=="number") and (input - output) or nil
 
+  local storedPct = (type(stored)=="number" and type(cap)=="number" and cap>0)
+  and (stored / cap * 100) or nil
 
   writePad(monL, valX+4, y,     fmtFE(cap, false),    valW-4)
   writePad(monL, valX+5, y+1,   fmtFE(stored, false), valW-5)
+  writePad(monL, valX+5, y+2,   (storedPct and string.format("%6.2f%%, storedPct")))
   writePad(monL, valX+5, y+2,   fmtFE(input, true),   valW-5)
   writePad(monL, valX+5, y+3,   fmtFE(output, true),  valW-5)
   writePad(monL, valX+5, y+4,   fmtFE(change, true),  valW-5)
