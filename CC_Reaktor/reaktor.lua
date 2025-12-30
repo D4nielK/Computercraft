@@ -157,7 +157,7 @@ local function leftLayout()
   local rightW = W - leftMargin - leftW - gap - rightMargin
 
   local statsH  = 19
-  local levelsH = 18
+  local levelsH = 16
 
   local rightH = H - topY - bottomMargin
   local turbH  = math.floor(rightH * 0.45)
