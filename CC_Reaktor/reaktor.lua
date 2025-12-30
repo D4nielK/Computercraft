@@ -158,28 +158,37 @@ end
 -- schreibt "Zahl" + "Einheit" in 2 festen Spalten
 -- numW/unitW kannst du global fein-tunen
 local COL = {
-  numW  = 8,  -- Breite der Zahl (rechtsbündig)
-  unitW = 5,  -- Breite der Einheit (links)
-  gap   = 1,  -- Abstand zwischen Zahl und Einheit
+  numW  = 8,   -- Zahl-Breite (rechts)
+  unitW = 6,   -- Einheit-Breite (links) -> 6 reicht für "GFE/t"
+  gap   = 1,
 }
 
 local function writeValUnit(m, x, y, numStr, unitStr, totalW)
   numStr  = tostring(numStr or "N/A")
   unitStr = tostring(unitStr or "")
 
-  -- Stelle sicher: Einheit ist NIE nil
-  if unitStr == "nil" then unitStr = "" end
+  -- Mindestbreiten (Einheit niemals abschneiden!)
+  local wantUnitW = math.max(COL.unitW, #unitStr)
+  local wantNumW  = COL.numW
 
-  -- Wenn totalW klein ist, clampen
-  local numW  = math.min(COL.numW, math.max(3, totalW - (COL.unitW + COL.gap)))
-  local unitW = math.min(COL.unitW, math.max(2, totalW - (numW + COL.gap)))
+  -- Wenn nicht genug Platz: NUR Zahlbreite reduzieren
+  local minNumW = 3
+  local need = wantNumW + COL.gap + wantUnitW
+  if need > totalW then
+    wantNumW = math.max(minNumW, totalW - (COL.gap + wantUnitW))
+  end
 
-  -- Zahl rechtsbündig, Einheit linksbündig
-  local n = string.format("%" .. numW .. "s", numStr)
-  local u = string.format("%-" .. unitW .. "s", unitStr)
+  -- Falls immer noch zu eng: dann harte Notlösung (alles in eine Zeile)
+  if wantNumW + COL.gap + wantUnitW > totalW then
+    writePad(m, x, y, numStr .. " " .. unitStr, totalW)
+    return
+  end
 
+  local n = string.format("%" .. wantNumW .. "s", numStr)
+  local u = string.format("%-" .. wantUnitW .. "s", unitStr)
   writePad(m, x, y, n .. string.rep(" ", COL.gap) .. u, totalW)
 end
+
 
 -- mB/t fixer: Zahl ohne Einheitformatierung
 local function fmtMBt_split(v)
@@ -468,21 +477,21 @@ local function drawStatsLive()
   writePad(monL, valX+5, y, (r.getStatus() and "ON" or "OFF"), valW-5)
 
   -- % Werte
-  do local n,u = fmtPct_split(r.getCoolantFilledPercentage());        writeValUnit(monL, valX+5, y+2, n, u, valW-5) end
-  do local n,u = fmtPct_split(r.getFuelFilledPercentage());           writeValUnit(monL, valX+5, y+3, n, u, valW-5) end
-  do local n,u = fmtPct_split(r.getHeatedCoolantFilledPercentage());   writeValUnit(monL, valX+5, y+4, n, u, valW-5) end
-  do local n,u = fmtPct_split(r.getWasteFilledPercentage());          writeValUnit(monL, valX+5, y+5, n, u, valW-5) end
+  do local n,u = fmtPct_split(r.getCoolantFilledPercentage());        writeValUnit(monL, valX, y+2, n, u, valW) end
+  do local n,u = fmtPct_split(r.getFuelFilledPercentage());           writeValUnit(monL, valX, y+3, n, u, valW) end
+  do local n,u = fmtPct_split(r.getHeatedCoolantFilledPercentage());   writeValUnit(monL, valX, y+4, n, u, valW) end
+  do local n,u = fmtPct_split(r.getWasteFilledPercentage());          writeValUnit(monL, valX, y+5, n, u, valW) end
 
   -- Max Burn / Burn (mB/t)
   local maxBurn = safeCall(r, "getMaxBurnRate")
-  do local n,u = fmtMBt_split(maxBurn);                               writeValUnit(monL, valX+4, y+7, n, u, valW-4) end
-  do local n,u = fmtMBt_split(safeCall(r,"getBurnRate") or 0);        writeValUnit(monL, valX+5, y+8, n, u, valW-5) end
+  do local n,u = fmtMBt_split(maxBurn);                               writeValUnit(monL, valX, y+7, n, u, valW) end
+  do local n,u = fmtMBt_split(safeCall(r,"getBurnRate") or 0);        writeValUnit(monL, valX, y+8, n, u, valW) end
 
   -- Temp (K)
-  do local n,u = fmtK_split(safeCall(r,"getTemperature") or 0);       writeValUnit(monL, valX+5, y+9, n, u, valW-5) end
+  do local n,u = fmtK_split(safeCall(r,"getTemperature") or 0);       writeValUnit(monL, valX, y+9, n, u, valW) end
 
   -- Damage (%)
-  do local n,u = fmtPct_split(safeCall(r,"getDamagePercent"));        writeValUnit(monL, valX+5, y+10, n, u, valW-5) end
+  do local n,u = fmtPct_split(safeCall(r,"getDamagePercent"));        writeValUnit(monL, valX, y+10, n, u, valW) end
 
   -- Zusatzwerte: Uptime ist Text
   writePad(monL, valX,   y+12, fmtTimeSeconds(runTime_s), valW)
@@ -545,20 +554,14 @@ local function drawTurbineLive()
   writePad(monL, valX, y, status, valW)
 
   -- Steam % / Water / Energy %
-  do local n,u = fmtPct_split(steamPct);   writeValUnit(monL, valX+4, y+2, n, u, valW-4) end
-  writePad(monL, valX+4, y+3, "N/A", valW-4)
-  do local n,u = fmtPct_split(energyPct);  writeValUnit(monL, valX+4, y+4, n, u, valW-4) end
+  do local n,u = fmtPct_split(steamPct);        writeValUnit(monL, valX, y+2, n, u, valW) end
+  do local n,u = fmtPct_split(energyPct);       writeValUnit(monL, valX, y+4, n, u, valW) end
+  do local n,u = fmtFE_split(maxProd, true);    writeValUnit(monL, valX, y+6, n, u, valW) end
+  do local n,u = fmtFE_split(prod, true);       writeValUnit(monL, valX, y+7, n, u, valW) end
+  do local n,u = fmtMBt_split(steamIn);         writeValUnit(monL, valX, y+8, n, u, valW) end
+  do local n,u = fmtMBt_split(maxFlow);         writeValUnit(monL, valX, y+9, n, u, valW) end
+  do local n,u = fmtMBt_split(flow);            writeValUnit(monL, valX, y+10,n, u, valW) end
 
-  -- Max Prod / Prod (FE/t)
-  do local n,u = fmtFE_split(maxProd, true); writeValUnit(monL, valX+3, y+6, n, u, valW-3) end
-  do local n,u = fmtFE_split(prod,    true); writeValUnit(monL, valX+6, y+7, n, u, valW-6) end
-
-  -- Steam In (mB/t)
-  do local n,u = fmtMBt_split(steamIn); writeValUnit(monL, valX+6, y+8, n, u, valW-6) end
-
-  -- Max Flow / Flow (mB/t)
-  do local n,u = fmtMBt_split(maxFlow); writeValUnit(monL, valX,   y+9,  n, u, valW) end
-  do local n,u = fmtMBt_split(flow);    writeValUnit(monL, valX+6, y+10, n, u, valW-6) end
 end
 
 
@@ -588,12 +591,13 @@ local function drawMatrixLive()
 
   local storedPct = (type(stored)=="number" and type(cap)=="number" and cap>0) and (stored / cap * 100) or nil
 
-  do local n,u = fmtFE_split(cap, false);    writeValUnit(monL, valX+4, y,   n, u, valW-4) end
-  do local n,u = fmtFE_split(stored,false);  writeValUnit(monL, valX+5, y+1, n, u, valW-5) end
-  do local n,u = fmtPct_split(storedPct);    writeValUnit(monL, valX+5, y+2, n, u, valW-5) end
-  do local n,u = fmtFE_split(input, true);   writeValUnit(monL, valX+5, y+3, n, u, valW-5) end
-  do local n,u = fmtFE_split(output,true);   writeValUnit(monL, valX+5, y+4, n, u, valW-5) end
-  do local n,u = fmtFE_split(change,true);   writeValUnit(monL, valX+5, y+5, n, u, valW-5) end
+  do local n,u = fmtFE_split(cap, false);    writeValUnit(monL, valX, y,   n, u, valW) end
+  do local n,u = fmtFE_split(stored,false);  writeValUnit(monL, valX, y+1, n, u, valW) end
+  do local n,u = fmtPct_split(storedPct);    writeValUnit(monL, valX, y+2, n, u, valW) end
+  do local n,u = fmtFE_split(input, true);   writeValUnit(monL, valX, y+3, n, u, valW) end
+  do local n,u = fmtFE_split(output,true);   writeValUnit(monL, valX, y+4, n, u, valW) end
+  do local n,u = fmtFE_split(change,true);   writeValUnit(monL, valX, y+5, n, u, valW) end
+
 end
 
 
