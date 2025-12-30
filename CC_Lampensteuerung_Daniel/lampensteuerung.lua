@@ -113,7 +113,7 @@ local function playButtonSound(type)
 end
 
 -- ================== HAUPTSCHLEIFE ==================
-mon.setTextScale(0.4)
+mon.setTextScale(0.5)
 applyLightSignals()
 applyGearSignals()
 
