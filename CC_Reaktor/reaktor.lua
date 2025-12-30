@@ -96,21 +96,90 @@ end
 
 local function fmtFE(v, perTick)
   if type(v) ~= "number" then return "N/A" end
-  local suf = perTick and " FE/t" or " FE"
-  local a = math.abs(v)
-  if a >= 1e12 then return string.format("%.2fTs", v/1e12, suf) end
-  if a >= 1e9  then return string.format("%.2fGs", v/1e9,  suf) end
-  if a >= 1e6  then return string.format("%.2fMs", v/1e6,  suf) end
-  if a >= 1e3  then return string.format("%.2fks", v/1e3,  suf) end
-  return string.format("%.0f%s", v, suf)
-end
 
+  -- Suffix ohne führendes Leerzeichen
+  local suf = perTick and "FE/t" or "FE"
+
+  local a = math.abs(v)
+  local num, prefix
+
+  if a >= 1e12 then num, prefix = v/1e12, "T"
+  elseif a >= 1e9 then num, prefix = v/1e9, "G"
+  elseif a >= 1e6 then num, prefix = v/1e6, "M"
+  elseif a >= 1e3 then num, prefix = v/1e3, "k"
+  else
+    -- unter 1000 ohne Prefix, damit es sauber bleibt
+    return string.format("%.0f%s", v, suf)
+  end
+
+  -- ohne Leerzeichen: 1.83MFE/t
+  return string.format("%.2f%s%s", num, prefix, suf)
+end
 
 local function safeCall(obj, fn, ...)
   if not obj or type(obj[fn]) ~= "function" then return nil end
   local ok, res = pcall(obj[fn], ...)
   if ok then return res end
   return nil
+end
+
+
+-- =========================================================
+-- RUNTIME / INTEGRATION
+-- =========================================================
+local lastEpoch = os.epoch("utc")  -- ms
+local wasOn = false
+local uptimeMs = 0
+
+local TICKS_PER_SEC = 20
+
+local runTime_s = 0
+local fuelUsed_mB = 0            -- integrierter Fuel-Verbrauch (mB)
+local energyGen_FE = 0           -- integrierte Energie (FE)
+
+local lastMs = os.epoch("utc")
+local lastShownSec = -1
+
+local function updateCounters()
+  local now = os.epoch("utc")
+  local dt = (now - lastMs) / 1000
+  lastMs = now
+  if dt < 0 then dt = 0 end
+
+  local on = safeCall(r, "getStatus") == true
+
+  -- Laufzeit: zählt nur wenn Reaktor "ON"
+  if on then
+    runTime_s = runTime_s + dt
+  end
+
+  -- Fuel: nur zählen wenn wirklich verbrannt wird
+  local actual = safeCall(r, "getActualBurnRate") -- mB/t
+  if type(actual) == "number" and actual > 0 then
+    -- optional extra check: Fuel wirklich vorhanden
+    local fuel = safeCall(r, "getFuel") -- mB im Tank (bei dir vorhanden)
+    if type(fuel) == "number" and fuel > 0 then
+      fuelUsed_mB = fuelUsed_mB + actual * TICKS_PER_SEC * dt
+    end
+  end
+end
+
+
+local function fmtTimeSeconds(sec)
+  sec = math.floor(sec + 0.5)
+  local h = math.floor(sec/3600)
+  local m = math.floor((sec%3600)/60)
+  local s = sec%60
+  return string.format("%02d:%02d:%02d", h, m, s)
+end
+
+
+local function fmtMB(mb)
+  if type(mb) ~= "number" then return "N/A" end
+  if mb >= 1000 then
+    return string.format("%.2fB", mb/1000)  -- Buckets
+  end
+  return string.format("%.0fmB", mb)
 end
 
 local function firstCall(obj, names)
@@ -145,12 +214,12 @@ local function leftLayout()
   local leftW  = 28 -- <- hier kannst du Breite links steuern
   local rightW = W - leftMargin - leftW - gap - rightMargin
 
-  local statsH  = 16
-  local levelsH = 18
+  local statsH  = 19
+  local levelsH = 16
 
   local rightH = H - topY - bottomMargin
-  local turbH  = math.floor(rightH * 0.45)
-  local matH   = rightH - turbH - gap
+  local turbH  = math.floor(rightH * 0.45)+4
+  local matH   = rightH - turbH - gap+2
 
   return {
     W=W, H=H,
@@ -196,6 +265,10 @@ local function drawLeftStatic()
   write(monL, x, y+8,   "Burn:")
   write(monL, x, y+9,   "Temp:")
   write(monL, x, y+10,  "Damage:")
+  write(monL, x, y+12,  "Uptime:")
+  write(monL, x, y+13,  "Fuel used:")
+  write(monL, x, y+14,  "Energy gen:")
+
 
   -- Turbine labels (wie gewünscht, mit Leerzeilen)
   local tx = LL.C.x + 2
@@ -219,9 +292,10 @@ local function drawLeftStatic()
   local my = LL.E.y + 3
   write(monL, mx, my,     "Max Energy")
   write(monL, mx, my+1,   "Stored:")
-  write(monL, mx, my+2,   "Input:")
-  write(monL, mx, my+3,   "Output:")
-  write(monL, mx, my+4,   "Change")
+  write(monL, mx, my+2,   "Stored %:")
+  write(monL, mx, my+3,   "Input:")
+  write(monL, mx, my+4,   "Output:")
+  write(monL, mx, my+5,   "Change:")
 end
 
 -- =========================================================
@@ -287,17 +361,22 @@ local function drawStatsLive()
   local valX = x + 12
   local valW = LL.B.w - (valX - LL.B.x) - 2
 
-  writePad(monL, valX, y,     (r.getStatus() and "ON" or "OFF"), valW)
-  writePad(monL, valX, y+2,   pct(r.getCoolantFilledPercentage()), valW)
-  writePad(monL, valX, y+3,   pct(r.getFuelFilledPercentage()), valW)
-  writePad(monL, valX, y+4,   pct(r.getHeatedCoolantFilledPercentage()), valW)
-  writePad(monL, valX, y+5,   pct(r.getWasteFilledPercentage()), valW)
+  writePad(monL, valX+5, y,     (r.getStatus() and "ON" or "OFF"), valW-5)
+  writePad(monL, valX+5, y+2,   pct(r.getCoolantFilledPercentage()), valW-5)
+  writePad(monL, valX+5, y+3,   pct(r.getFuelFilledPercentage()), valW-5)
+  writePad(monL, valX+5, y+4,   pct(r.getHeatedCoolantFilledPercentage()), valW-5)
+  writePad(monL, valX+5, y+5,   pct(r.getWasteFilledPercentage()), valW-5)
 
   local maxBurn = safeCall(r, "getMaxBurnRate")
-  writePad(monL, valX-1, y+7,   (maxBurn and string.format("%.1fmB/t", maxBurn) or "N/A"), valW)
-  writePad(monL, valX, y+8,   string.format("%.1fmB/t", (safeCall(r,"getBurnRate") or 0)), valW)
-  writePad(monL, valX, y+9,   string.format("%.0fK", (safeCall(r,"getTemperature") or 0)), valW)
-  writePad(monL, valX, y+10,  pct(safeCall(r,"getDamagePercent")), valW)
+  writePad(monL, valX+4, y+7,   (maxBurn and string.format("%.1fmB/t", maxBurn) or "N/A"), valW-4)
+  writePad(monL, valX+5, y+8,   string.format("%.1fmB/t", (safeCall(r,"getBurnRate") or 0)), valW-5)
+  writePad(monL, valX+5, y+9,   string.format("%.0fK", (safeCall(r,"getTemperature") or 0)), valW-5)
+  writePad(monL, valX+5, y+10,  pct(safeCall(r,"getDamagePercent")), valW-5)
+  -- Zusatzwerte
+  writePad(monL, valX, y+12, fmtTimeSeconds(runTime_s), valW)
+  writePad(monL, valX+7, y+13, fmtMB(fuelUsed_mB), valW-7)
+  writePad(monL, valX+7, y+14, fmtFE(energyGen_FE, false), valW-7)
+
 end
 
 -- =========================================================
@@ -364,7 +443,7 @@ local function drawTurbineLive()
   writePad(monL, valX+4, y+4,   energyPct and pct(energyPct) or "N/A", valW-4)
 
   -- Max Production / Production
- writePad(monL, valX,   y+6, maxProd and fmtFE(maxProd, true) or "N/A", valW)
+ writePad(monL, valX+3,   y+6, maxProd and fmtFE(maxProd, true) or "N/A", valW-3)
  writePad(monL, valX+6, y+7, prod    and fmtFE(prod, true)    or "N/A", valW-6)
 
 
@@ -404,12 +483,15 @@ local function drawMatrixLive()
   local output = J_to_FE(outputJ)
   local change = (type(input)=="number" and type(output)=="number") and (input - output) or nil
 
+  local storedPct = (type(stored)=="number" and type(cap)=="number" and cap>0)
+  and (stored / cap * 100) or nil
 
-  writePad(monL, valX, y,     fmtFE(cap, false),    valW)
-  writePad(monL, valX, y+2,   fmtFE(stored, false), valW)
-  writePad(monL, valX, y+4,   fmtFE(input, true),   valW)
-  writePad(monL, valX, y+5,   fmtFE(output, true),  valW)
-  writePad(monL, valX, y+7,   fmtFE(change, true),  valW)
+  writePad(monL, valX+4, y,     fmtFE(cap, false),    valW-4)
+  writePad(monL, valX+5, y+1,   fmtFE(stored, false), valW-5)
+  writePad(monL, valX+5, y+2,   (storedPct and string.format("%6.2f%%", storedPct) or "N/A"), valW-5)
+  writePad(monL, valX+5, y+3,   fmtFE(input, true),   valW-5)
+  writePad(monL, valX+5, y+4,   fmtFE(output, true),  valW-5)
+  writePad(monL, valX+5, y+5,   fmtFE(change, true),  valW-5)
 end
 
 
@@ -479,14 +561,25 @@ drawLeftStatic()
 drawRightStatic()
 
 while true do
+  updateCounters()
+
   drawStatsLive()
   drawLevelsLive()
   drawTurbineLive()
   drawMatrixLive()
 
-  local e,side,x,y = os.pullEventTimeout("monitor_touch", CFG.REFRESH)
-  if e=="monitor_touch" and side==CFG.RIGHT_MONITOR then
-    local id = hit(x,y)
-    if id then action(id) end
+  -- Timer-Event (dein Ersatz für pullEventTimeout)
+  local timer = os.startTimer(CFG.REFRESH)
+  local e, p1, p2, p3 = os.pullEvent()
+  while e ~= "monitor_touch" and not (e == "timer" and p1 == timer) do
+    e, p1, p2, p3 = os.pullEvent()
+  end
+
+  if e == "monitor_touch" then
+    local side, x, y = p1, p2, p3
+    if side == CFG.RIGHT_MONITOR then
+      local id = hit(x, y)
+      if id then action(id) end
+    end
   end
 end
