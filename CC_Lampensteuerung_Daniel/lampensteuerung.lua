@@ -1,140 +1,160 @@
--- ================== KONFIGURATION ==================
-local mon = peripheral.find("monitor") or peripheral.wrap("top")
+-- ================= CONFIG =================
+local side = "back"              -- Bundled Cable Seite anpassen
+local mon = peripheral.find("monitor")
 local speaker = peripheral.find("speaker")
-local side = "back"       -- Bundled Cable für Licht
-local sideGear = "back"  -- Bundled Cable für Gearshifts
 
--- Farben für Licht
-local ORANGE = colors.orange
-local WHITE  = colors.white
-
--- Gearshift-Liste
-local gears = {
-    {name="GS Grau", color=colors.gray},
-    {name="GS Lila", color=colors.purple},
-    {name="GS Rot", color=colors.red},
-    {name="GS Blau", color=colors.blue},
-    {name="GS Gelb", color=colors.yellow},
+-- Lampen-Konfiguration (dauerhaft)
+local lamps = {
+    {name="Indirekte", color=colors.orange, state=false},
+    {name="Hauptlicht", color=colors.white, state=false}
 }
 
--- ================== ZUSTÄNDE ==================
-local lightState = { orange=false, white=false }
+-- Gearshift-Konfiguration (nur Impuls)
+local gearshifts = {
+    {name="Grau",  color=colors.gray},
+    {name="Lila",  color=colors.purple},
+    {name="Rot",   color=colors.red},
+    {name="Blau",  color=colors.blue},
+    {name="Gelb",  color=colors.yellow}
+}
 
--- ================== FUNKTIONEN ==================
-local function applyLightSignals()
+-- Button Layout
+local btnSpacing = 1
+local btnHeight = 5
+
+-- ================= HELPERS =================
+-- Puls für Gearshift
+local function pulse(color, duration)
+    local current = redstone.getBundledOutput(side) or 0
+    redstone.setBundledOutput(side, colors.combine(current, color))
+    sleep(duration)
+    redstone.setBundledOutput(side, current)
+end
+
+-- Lampen-Output setzen
+local function applyLamps()
     local out = 0
-    if lightState.orange then out = bit.bor(out, ORANGE) end
-    if lightState.white  then out = bit.bor(out, WHITE)  end
+    for _,l in ipairs(lamps) do
+        if l.state then
+            out = colors.combine(out, l.color)
+        end
+    end
     redstone.setBundledOutput(side, out)
 end
 
--- Sendet einen kurzen Impuls an den Gearshift
-local function pulseGear(index, duration)
-    local out = gears[index].color
-    redstone.setBundledOutput(sideGear, out)
-    sleep(duration or 0.2)
-    redstone.setBundledOutput(sideGear, 0)
+-- Button-Klick prüfen
+local function inButton(btn, x, y)
+    return x >= btn.x and x <= btn.x + btn.w - 1 and y >= btn.y and y <= btn.y + btn.h - 1
 end
 
+-- Center X
+local function centerX(w, boxW)
+    return math.floor((w - boxW) / 2) + 1
+end
+
+-- Button zeichnen
 local function drawButton(x, y, w, h, label, active, pressed)
     local bg = active and colors.lime or colors.lightGray
     if pressed then bg = colors.green end
+
     mon.setBackgroundColor(bg)
     mon.setTextColor(colors.black)
-    for r=0,h-1 do
-        mon.setCursorPos(x, y+r)
+    for r = 0, h - 1 do
+        mon.setCursorPos(x, y + r)
         mon.write(string.rep(" ", w))
     end
+
     local tx = x + math.floor((w - #label)/2)
     local ty = y + math.floor(h/2)
     mon.setCursorPos(tx, ty)
     mon.write(label)
 end
 
-local function clear() mon.setBackgroundColor(colors.black) mon.clear() end
+-- Clear Monitor
+local function clear()
+    mon.setBackgroundColor(colors.black)
+    mon.clear()
+end
 
--- ================== UI ==================
-local function drawUI()
+-- ================= DRAW LAYOUT =================
+local function drawAll()
     clear()
     local w,h = mon.getSize()
-    local spacingX, spacingY = 1, 0
-    local btnW = math.max(6, math.floor((w - spacingX*3)/2))
-    local btnH = 3
-    local top = 2
+    local btnW = math.max(14, math.floor(w * 0.7))
+    local x = centerX(w, btnW)
+    local yTop = 2
 
-    local buttons = {lights={}, gears={}}
+    local positions = {}
 
-    -- Licht Buttons nebeneinander
-    drawButton(spacingX, top, btnW, btnH, "Indirekte Beleuchtung", lightState.orange, false)
-    buttons.lights.orange = {x=spacingX, y=top, w=btnW, h=btnH}
-    drawButton(spacingX*2 + btnW, top, btnW, btnH, "Hauptlicht", lightState.white, false)
-    buttons.lights.white = {x=spacingX*2 + btnW, y=top, w=btnW, h=btnH}
-
-    -- Alles EIN/AUS Button unter Licht
-    local yNext = top + btnH + spacingY
-    drawButton(spacingX, yNext, btnW*2 + spacingX, btnH, (lightState.orange or lightState.white) and "Alles Licht EIN/AUS" or "Alles Licht AUS", (lightState.orange or lightState.white), false)
-    buttons.lights.all = {x=spacingX, y=yNext, w=btnW*2 + spacingX, h=btnH}
-
-    -- Gearshift Buttons nebeneinander (Impuls) weiter unten für Lücke
-    local yGear = yNext + btnH + spacingY + 2  -- +2 Zeilen Abstand
-    for i,g in ipairs(gears) do
-        local col = (i-1)%2
-        local row = math.floor((i-1)/2)
-        local xPos = spacingX + col*(btnW + spacingX)
-        local yPos = yGear + row*(btnH + spacingY)
-        drawButton(xPos, yPos, btnW, btnH, g.name, false, false)
-        buttons.gears[i] = {x=xPos, y=yPos, w=btnW, h=btnH}
+    -- Lampen-Buttons
+    for i,l in ipairs(lamps) do
+        local y = yTop + (i-1)*(btnHeight + btnSpacing)
+        drawButton(x, y, btnW, btnHeight, l.name, l.state, false)
+        positions[l.name] = {x=x, y=y, w=btnW, h=btnHeight}
     end
 
-    return buttons
+    -- Gearshift-Buttons
+    for i,g in ipairs(gearshifts) do
+        local y = yTop + (#lamps + i-1)*(btnHeight + btnSpacing)
+        drawButton(x, y, btnW, btnHeight, g.name, false, false)
+        positions[g.name] = {x=x, y=y, w=btnW, h=btnHeight}
+    end
+
+    -- Zentralschalter
+    local y = yTop + (#lamps + #gearshifts)*(btnHeight + btnSpacing)
+    drawButton(x, y, btnW, btnHeight, "ALLE Gearshifts", false, false)
+    positions["all"] = {x=x, y=y, w=btnW, h=btnHeight}
+
+    return positions
 end
 
-local function inButton(btn, cx, cy)
-    return cx >= btn.x and cx <= btn.x+btn.w-1 and cy >= btn.y and cy <= btn.y+btn.h-1
-end
-
+-- Button Sound
 local function playButtonSound(type)
     if not speaker then return end
-    if type=="orange" then speaker.playSound("minecraft:block.note_block.harp",1,1)
-    elseif type=="white" then speaker.playSound("minecraft:block.note_block.bell",1,1)
-    elseif type=="all" then speaker.playSound("minecraft:block.note_block.pling",1,1) end
+    if type == "all" then
+        speaker.playSound("minecraft:block.note_block.pling", 1, 1)
+    else
+        speaker.playSound("minecraft:block.note_block.harp", 1, 1)
+    end
 end
 
--- ================== HAUPTSCHLEIFE ==================
+-- ================= MAIN LOOP =================
 mon.setTextScale(0.5)
-applyLightSignals()
+applyLamps() -- Lampen initialisieren
 
 while true do
-    local buttons = drawUI()
-    local e,s,x,y = os.pullEvent("monitor_touch")
+    local buttons = drawAll()
+    local e, sideClick, x, y = os.pullEvent("monitor_touch")
 
-    -- Licht Buttons
-    if inButton(buttons.lights.orange,x,y) then
-        lightState.orange = not lightState.orange
-        drawUI()
-        applyLightSignals()
-        playButtonSound("orange")
-    elseif inButton(buttons.lights.white,x,y) then
-        lightState.white = not lightState.white
-        drawUI()
-        applyLightSignals()
-        playButtonSound("white")
-    elseif inButton(buttons.lights.all,x,y) then
-        local new = not (lightState.orange or lightState.white)
-        lightState.orange, lightState.white = new,new
-        drawUI()
-        applyLightSignals()
-        playButtonSound("all")
+    -- Lampen-Buttons
+    for _,l in ipairs(lamps) do
+        local btn = buttons[l.name]
+        if inButton(btn, x, y) then
+            drawButton(btn.x, btn.y, btn.w, btn.h, l.name, l.state, true)
+            playButtonSound(l.name)
+            sleep(0.1)
+            l.state = not l.state
+            applyLamps()
+        end
     end
 
-    -- Gearshift Buttons (Impuls)
-    for i,b in ipairs(buttons.gears) do
-        if inButton(b,x,y) then
-            -- kurz gedrückt anzeigen, ohne Licht zu beeinflussen
-            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, true)
-            pulseGear(i, 0.2)
-            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, false)
-            break
+    -- Gearshift-Buttons (Impuls)
+    for _,g in ipairs(gearshifts) do
+        local btn = buttons[g.name]
+        if inButton(btn, x, y) then
+            drawButton(btn.x, btn.y, btn.w, btn.h, g.name, true, true)
+            playButtonSound(g.name)
+            pulse(g.color, 0.2)
+        end
+    end
+
+    -- Zentralschalter (alle Gearshifts)
+    local btnAll = buttons["all"]
+    if inButton(btnAll, x, y) then
+        drawButton(btnAll.x, btnAll.y, btnAll.w, btnAll.h, "ALLE Gearshifts", true, true)
+        playButtonSound("all")
+        for _,g in ipairs(gearshifts) do
+            pulse(g.color, 0.2)
         end
     end
 end
