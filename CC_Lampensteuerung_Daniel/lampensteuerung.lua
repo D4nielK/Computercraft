@@ -2,7 +2,7 @@
 local mon = peripheral.find("monitor") or peripheral.wrap("top")
 local speaker = peripheral.find("speaker")
 local side = "back"       -- Bundled Cable für Licht
-local sideGear = "right"  -- Bundled Cable für Gearshifts
+local sideGear = "back"  -- Bundled Cable für Gearshifts
 
 -- Farben für Licht
 local ORANGE = colors.orange
