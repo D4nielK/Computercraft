@@ -160,7 +160,7 @@ local function leftLayout()
   local levelsH = 16
 
   local rightH = H - topY - bottomMargin
-  local turbH  = math.floor(rightH * 0.45)
+  local turbH  = math.floor(rightH * 0.45)+4
   local matH   = rightH - turbH - gap
 
   return {
