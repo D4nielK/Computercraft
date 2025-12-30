@@ -298,17 +298,17 @@ local function drawStatsLive()
   local valX = x + 12
   local valW = LL.B.w - (valX - LL.B.x) - 2
 
-  writePad(monL, valX+4, y,     (r.getStatus() and "ON" or "OFF"), valW)
-  writePad(monL, valX+4, y+2,   pct(r.getCoolantFilledPercentage()), valW)
-  writePad(monL, valX+4, y+3,   pct(r.getFuelFilledPercentage()), valW)
-  writePad(monL, valX+4, y+4,   pct(r.getHeatedCoolantFilledPercentage()), valW)
-  writePad(monL, valX+4, y+5,   pct(r.getWasteFilledPercentage()), valW)
+  writePad(monL, valX+4, y,     (r.getStatus() and "ON" or "OFF"), valW-4)
+  writePad(monL, valX+4, y+2,   pct(r.getCoolantFilledPercentage()), valW-4)
+  writePad(monL, valX+4, y+3,   pct(r.getFuelFilledPercentage()), valW-4)
+  writePad(monL, valX+4, y+4,   pct(r.getHeatedCoolantFilledPercentage()), valW-4)
+  writePad(monL, valX+4, y+5,   pct(r.getWasteFilledPercentage()), valW-4)
 
   local maxBurn = safeCall(r, "getMaxBurnRate")
-  writePad(monL, valX+3, y+7,   (maxBurn and string.format("%.1fmB/t", maxBurn) or "N/A"), valW)
-  writePad(monL, valX+4, y+8,   string.format("%.1fmB/t", (safeCall(r,"getBurnRate") or 0)), valW)
-  writePad(monL, valX+4, y+9,   string.format("%.0fK", (safeCall(r,"getTemperature") or 0)), valW)
-  writePad(monL, valX+4, y+10,  pct(safeCall(r,"getDamagePercent")), valW)
+  writePad(monL, valX+3, y+7,   (maxBurn and string.format("%.1fmB/t", maxBurn) or "N/A"), valW-3)
+  writePad(monL, valX+4, y+8,   string.format("%.1fmB/t", (safeCall(r,"getBurnRate") or 0)), valW-4)
+  writePad(monL, valX+4, y+9,   string.format("%.0fK", (safeCall(r,"getTemperature") or 0)), valW-4)
+  writePad(monL, valX+4, y+10,  pct(safeCall(r,"getDamagePercent")), valW-4)
 end
 
 -- =========================================================
