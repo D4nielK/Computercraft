@@ -2,7 +2,7 @@
 local mon = peripheral.find("monitor") or peripheral.wrap("top")
 local speaker = peripheral.find("speaker")
 local side = "back"
-local sideGear = "right"
+local sideGear = "back"
 
 -- Farben für Licht
 local ORANGE = colors.orange
@@ -28,11 +28,10 @@ local function applyLightSignals()
     redstone.setBundledOutput(side, out)
 end
 
--- Sendet einen kurzen Impuls an den Gearshift
 local function pulseGear(index, duration)
     local out = gears[index].color
     redstone.setBundledOutput(sideGear, out)
-    sleep(duration or 0.2) -- Impulsdauer 0.2 Sekunden
+    sleep(duration or 0.2)
     redstone.setBundledOutput(sideGear, 0)
 end
 
@@ -53,6 +52,7 @@ end
 
 local function clear() mon.setBackgroundColor(colors.black) mon.clear() end
 
+-- ================== UI ==================
 local function drawUI()
     clear()
     local w,h = mon.getSize()
@@ -74,8 +74,8 @@ local function drawUI()
     drawButton(spacingX, yNext, btnW*2 + spacingX, btnH, (lightState.orange or lightState.white) and "Alles Licht EIN/AUS" or "Alles Licht AUS", (lightState.orange or lightState.white), false)
     buttons.lights.all = {x=spacingX, y=yNext, w=btnW*2 + spacingX, h=btnH}
 
-    -- Gearshift Buttons nebeneinander (nur Impuls)
-    local yGear = yNext + btnH + spacingY
+    -- Gearshift Buttons nebeneinander (Impuls)
+    local yGear = yNext + btnH + spacingY + 2  -- +2 Zeilen Abstand für Lücke
     for i,g in ipairs(gears) do
         local col = (i-1)%2
         local row = math.floor((i-1)/2)
@@ -130,8 +130,7 @@ while true do
     -- Gearshift Buttons (Impuls)
     for i,b in ipairs(buttons.gears) do
         if inButton(b,x,y) then
-            -- Zeige kurz den Button als gedrückt
-            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, true)
+            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, true) -- kurz gedrückt
             pulseGear(i, 0.2)
             drawUI()
             break
