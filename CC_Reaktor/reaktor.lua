@@ -123,16 +123,48 @@ local lastEpoch = os.epoch("utc")  -- ms
 local wasOn = false
 local uptimeMs = 0
 
+local TICKS_PER_SEC = 20
+
+local runTime_s = 0
 local fuelUsed_mB = 0            -- integrierter Fuel-Verbrauch (mB)
 local energyGen_FE = 0           -- integrierte Energie (FE)
 
-local function fmtTime(ms)
-  if type(ms) ~= "number" then return "N/A" end
-  local s = math.floor(ms/1000)
-  local h = math.floor(s/3600); s = s - h*3600
-  local m = math.floor(s/60);   s = s - m*60
+local lastMs = os.epoch("utc")
+local lastShownSec = -1
+
+local function updateCounters()
+  local now = os.epoch("utc")
+  local dt = (now - lastMs) / 1000
+  lastMs = now
+  if dt < 0 then dt = 0 end
+
+  local on = safeCall(r, "getStatus") == true
+
+  -- Laufzeit: zählt nur wenn Reaktor "ON"
+  if on then
+    runTime_s = runTime_s + dt
+  end
+
+  -- Fuel: nur zählen wenn wirklich verbrannt wird
+  local actual = safeCall(r, "getActualBurnRate") -- mB/t
+  if type(actual) == "number" and actual > 0 then
+    -- optional extra check: Fuel wirklich vorhanden
+    local fuel = safeCall(r, "getFuel") -- mB im Tank (bei dir vorhanden)
+    if type(fuel) == "number" and fuel > 0 then
+      fuelUsed_mB = fuelUsed_mB + actual * TICKS_PER_SEC * dt
+    end
+  end
+end
+
+
+local function fmtTimeSeconds(sec)
+  sec = math.floor(sec + 0.5)
+  local h = math.floor(sec/3600)
+  local m = math.floor((sec%3600)/60)
+  local s = sec%60
   return string.format("%02d:%02d:%02d", h, m, s)
 end
+
 
 local function fmtMB(mb)
   if type(mb) ~= "number" then return "N/A" end
@@ -342,7 +374,7 @@ local function drawStatsLive()
   writePad(monL, valX+5, y+9,   string.format("%.0fK", (safeCall(r,"getTemperature") or 0)), valW-5)
   writePad(monL, valX+5, y+10,  pct(safeCall(r,"getDamagePercent")), valW-5)
   -- Zusatzwerte
-  writePad(monL, valX, y+12, fmtTime(uptimeMs), valW)
+  writePad(monL, valX, y+12, fmtTimeSeconds(runTime_s), valW)
   writePad(monL, valX+7, y+13, fmtMB(fuelUsed_mB), valW-7)
   writePad(monL, valX+7, y+14, fmtFE(energyGen_FE, false), valW-7)
 
@@ -530,61 +562,25 @@ drawLeftStatic()
 drawRightStatic()
 
 while true do
-
-  -- Zeitdelta
-local now = os.epoch("utc")
-local dt = (now - lastEpoch) / 1000  -- Sekunden
-lastEpoch = now
-
--- Reactor status
-local on = (safeCall(r, "getStatus") == true)
-
-if on then
-  uptimeMs = uptimeMs + (dt * 1000)
-
-  -- Fuel used (BurnRate ist mB/tick, 20 ticks/s)
-  local br = safeCall(r, "getBurnRate") -- mB/t
-  if type(br) == "number" then
-    fuelUsed_mB = fuelUsed_mB + br * (dt * 20)
-  end
-
-  -- Energy gen aus Turbine (ProductionRate liefert bei dir J/t -> du wandelst in FE/t um)
-  if t then
-    local prodJ = safeCall(t, "getProductionRate")
-    local prodFE = J_to_FE(prodJ)
-    if type(prodFE) == "number" then
-      energyGen_FE = energyGen_FE + prodFE * (dt * 20)
-    end
-  end
-end
-
+  updateCounters()
 
   drawStatsLive()
   drawLevelsLive()
   drawTurbineLive()
   drawMatrixLive()
 
--- Timer starten (ersetzt pullEventTimeout)
-local timer = os.startTimer(CFG.REFRESH)
+  -- Timer-Event (dein Ersatz für pullEventTimeout)
+  local timer = os.startTimer(CFG.REFRESH)
+  local e, p1, p2, p3 = os.pullEvent()
+  while e ~= "monitor_touch" and not (e == "timer" and p1 == timer) do
+    e, p1, p2, p3 = os.pullEvent()
+  end
 
-local e, p1, p2, p3 = os.pullEvent()
- while e ~= "monitor_touch" and not (e == "timer" and p1 == timer) do
-  e, p1, p2, p3 = os.pullEvent()
- end
-
- -- Anzeige IMMER aktualisieren
- drawStatsLive()
- drawLevelsLive()
- drawTurbineLive()
- drawMatrixLive()
-
- -- Nur bei Touch reagieren
- if e == "monitor_touch" then
-   local side, x, y = p1, p2, p3
-   if side == CFG.RIGHT_MONITOR then
-    local id = hit(x, y)
-    if id then action(id) end
-   end
- end
-
+  if e == "monitor_touch" then
+    local side, x, y = p1, p2, p3
+    if side == CFG.RIGHT_MONITOR then
+      local id = hit(x, y)
+      if id then action(id) end
+    end
+  end
 end
