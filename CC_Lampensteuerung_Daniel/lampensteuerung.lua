@@ -1,8 +1,8 @@
 -- ================== KONFIGURATION ==================
 local mon = peripheral.find("monitor") or peripheral.wrap("top")
-local speaker = peripheral.find("speaker") -- Optional für Sounds
-local side = "back" -- Bundled Cable Seite für Lichter
-local sideGear = "right" -- Bundled Cable Seite für Gearshifts
+local speaker = peripheral.find("speaker")
+local side = "back"
+local sideGear = "back"
 
 -- Farben für Licht
 local ORANGE = colors.orange
@@ -62,8 +62,8 @@ local function clear() mon.setBackgroundColor(colors.black) mon.clear() end
 local function drawUI()
     clear()
     local w,h = mon.getSize()
-    local spacingX, spacingY = 2, 1
-    local btnW = math.floor((w - spacingX*3)/2)  -- Zwei Buttons pro Reihe
+    local spacingX, spacingY = 1, 0
+    local btnW = math.floor((w - spacingX*3)/2)
     local btnH = 3
     local top = 2
 
@@ -113,7 +113,7 @@ local function playButtonSound(type)
 end
 
 -- ================== HAUPTSCHLEIFE ==================
-mon.setTextScale(0.5)
+mon.setTextScale(0.4)
 applyLightSignals()
 applyGearSignals()
 
