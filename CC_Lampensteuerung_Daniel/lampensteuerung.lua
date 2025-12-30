@@ -1,141 +1,140 @@
--- Monitor + Bundled-Setup
-local mon = peripheral.find("monitor")
-local side = "back" -- Seite mit dem bundled cable anpassen!
-local speaker = peripheral.find("speaker") -- Speaker für Sound
+-- ================== KONFIGURATION ==================
+local mon = peripheral.find("monitor") or peripheral.wrap("top")
+local speaker = peripheral.find("speaker")
+local side = "back"       -- Bundled Cable für Licht
+local sideGear = "back"  -- Bundled Cable für Gearshifts
 
--- Farben (ProjectRed / Bundled)
+-- Farben für Licht
 local ORANGE = colors.orange
 local WHITE  = colors.white
 
-local state = {
-  orange = false,
-  white  = false
+-- Gearshift-Liste
+local gears = {
+    {name="GS Grau", color=colors.gray},
+    {name="GS Lila", color=colors.purple},
+    {name="GS Rot", color=colors.red},
+    {name="GS Blau", color=colors.blue},
+    {name="GS Gelb", color=colors.yellow},
 }
 
-local function applySignals()
-  local out = 0
-  if state.orange then out = bit.bor(out, ORANGE) end
-  if state.white  then out = bit.bor(out, WHITE)  end
-  redstone.setBundledOutput(side, out)
+-- ================== ZUSTÄNDE ==================
+local lightState = { orange=false, white=false }
+
+-- ================== FUNKTIONEN ==================
+local function applyLightSignals()
+    local out = 0
+    if lightState.orange then out = bit.bor(out, ORANGE) end
+    if lightState.white  then out = bit.bor(out, WHITE)  end
+    redstone.setBundledOutput(side, out)
 end
 
--- ======= UI HELPERS =======
-local function centerX(w, boxW)
-  return math.floor((w - boxW) / 2) + 1
+-- Sendet einen kurzen Impuls an den Gearshift
+local function pulseGear(index, duration)
+    local out = gears[index].color
+    redstone.setBundledOutput(sideGear, out)
+    sleep(duration or 0.2)
+    redstone.setBundledOutput(sideGear, 0)
 end
 
 local function drawButton(x, y, w, h, label, active, pressed)
-  -- Schatten
-  mon.setBackgroundColor(colors.gray)
-  for i = 0, 1 do
-    mon.setCursorPos(x + i, y + h)
-    mon.write(string.rep(" ", w))
-  end
-  for r = 0, 1 do
-    for i = 0, 1 do
-      mon.setCursorPos(x + w, y + r)
-      mon.write(" ")
+    local bg = active and colors.lime or colors.lightGray
+    if pressed then bg = colors.green end
+    mon.setBackgroundColor(bg)
+    mon.setTextColor(colors.black)
+    for r=0,h-1 do
+        mon.setCursorPos(x, y+r)
+        mon.write(string.rep(" ", w))
     end
-  end
-
-  -- Button-Hintergrund
-  local bg = active and colors.lime or colors.lightGray
-  if pressed then bg = colors.green end
-
-  mon.setBackgroundColor(bg)
-  mon.setTextColor(colors.black)
-  for r = 0, h - 1 do
-    mon.setCursorPos(x, y + r)
-    mon.write(string.rep(" ", w))
-  end
-
-  -- Label mittig
-  local tx = x + math.floor((w - #label) / 2)
-  local ty = y + math.floor(h / 2)
-  mon.setCursorPos(tx, ty)
-  mon.write(label)
+    local tx = x + math.floor((w - #label)/2)
+    local ty = y + math.floor(h/2)
+    mon.setCursorPos(tx, ty)
+    mon.write(label)
 end
 
-local function clear()
-  mon.setBackgroundColor(colors.black)
-  mon.clear()
+local function clear() mon.setBackgroundColor(colors.black) mon.clear() end
+
+-- ================== UI ==================
+local function drawUI()
+    clear()
+    local w,h = mon.getSize()
+    local spacingX, spacingY = 1, 0
+    local btnW = math.max(6, math.floor((w - spacingX*3)/2))
+    local btnH = 3
+    local top = 2
+
+    local buttons = {lights={}, gears={}}
+
+    -- Licht Buttons nebeneinander
+    drawButton(spacingX, top, btnW, btnH, "Indirekte Beleuchtung", lightState.orange, false)
+    buttons.lights.orange = {x=spacingX, y=top, w=btnW, h=btnH}
+    drawButton(spacingX*2 + btnW, top, btnW, btnH, "Hauptlicht", lightState.white, false)
+    buttons.lights.white = {x=spacingX*2 + btnW, y=top, w=btnW, h=btnH}
+
+    -- Alles EIN/AUS Button unter Licht
+    local yNext = top + btnH + spacingY
+    drawButton(spacingX, yNext, btnW*2 + spacingX, btnH, (lightState.orange or lightState.white) and "Alles Licht EIN/AUS" or "Alles Licht AUS", (lightState.orange or lightState.white), false)
+    buttons.lights.all = {x=spacingX, y=yNext, w=btnW*2 + spacingX, h=btnH}
+
+    -- Gearshift Buttons nebeneinander (Impuls) weiter unten für Lücke
+    local yGear = yNext + btnH + spacingY + 2  -- +2 Zeilen Abstand
+    for i,g in ipairs(gears) do
+        local col = (i-1)%2
+        local row = math.floor((i-1)/2)
+        local xPos = spacingX + col*(btnW + spacingX)
+        local yPos = yGear + row*(btnH + spacingY)
+        drawButton(xPos, yPos, btnW, btnH, g.name, false, false)
+        buttons.gears[i] = {x=xPos, y=yPos, w=btnW, h=btnH}
+    end
+
+    return buttons
 end
 
--- ======= LAYOUT =======
-local function drawAll()
-  clear()
-
-  local w, h = mon.getSize()
-  local btnW = math.max(14, math.floor(w * 0.7))
-  local btnH = 5
-  local spacing = 2
-  local top = 2
-  local x = centerX(w, btnW)
-
-  -- Einzel-Buttons
-  drawButton(x, top, btnW, btnH, "Indirekte Beleuchtung", state.orange, false)
-  drawButton(x, top + btnH + spacing, btnW, btnH, "Hauptlicht", state.white, false)
-
-  -- Zentral-Button
-  drawButton(x, top + (btnH + spacing) * 2, btnW, btnH, "Alles EIN/AUS", (state.orange or state.white), false)
-
-  return {
-    orange = {x = x, y = top, w = btnW, h = btnH},
-    white  = {x = x, y = top + btnH + spacing, w = btnW, h = btnH},
-    all    = {x = x, y = top + (btnH + spacing) * 2, w = btnW, h = btnH},
-  }
-end
-
--- Prüfen ob Klick in Button
 local function inButton(btn, cx, cy)
-  return cx >= btn.x and cx <= btn.x + btn.w - 1
-     and cy >= btn.y and cy <= btn.y + btn.h - 1
+    return cx >= btn.x and cx <= btn.x+btn.w-1 and cy >= btn.y and cy <= btn.y+btn.h-1
 end
 
--- ======= BUTTON SOUNDS =======
 local function playButtonSound(type)
-  if not speaker then return end
-  if type == "orange" then
-    speaker.playSound("minecraft:block.note_block.harp", 1, 1)
-  elseif type == "white" then
-    speaker.playSound("minecraft:block.note_block.bell", 1, 1)
-  elseif type == "all" then
-    speaker.playSound("minecraft:block.note_block.pling", 1, 1)
-  end
+    if not speaker then return end
+    if type=="orange" then speaker.playSound("minecraft:block.note_block.harp",1,1)
+    elseif type=="white" then speaker.playSound("minecraft:block.note_block.bell",1,1)
+    elseif type=="all" then speaker.playSound("minecraft:block.note_block.pling",1,1) end
 end
 
--- ======= MAIN LOOP =======
+-- ================== HAUPTSCHLEIFE ==================
 mon.setTextScale(0.5)
-applySignals()
+applyLightSignals()
 
 while true do
-  local buttons = drawAll()
-  local e, sideClick, x, y = os.pullEvent("monitor_touch")
+    local buttons = drawUI()
+    local e,s,x,y = os.pullEvent("monitor_touch")
 
-  local pressed
-  if inButton(buttons.orange, x, y) then
-    pressed = buttons.orange
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Indirekte Beleuchtung", state.orange, true)
-    playButtonSound("orange")
-    sleep(0.1)
-    state.orange = not state.orange
+    -- Licht Buttons
+    if inButton(buttons.lights.orange,x,y) then
+        lightState.orange = not lightState.orange
+        drawUI()
+        applyLightSignals()
+        playButtonSound("orange")
+    elseif inButton(buttons.lights.white,x,y) then
+        lightState.white = not lightState.white
+        drawUI()
+        applyLightSignals()
+        playButtonSound("white")
+    elseif inButton(buttons.lights.all,x,y) then
+        local new = not (lightState.orange or lightState.white)
+        lightState.orange, lightState.white = new,new
+        drawUI()
+        applyLightSignals()
+        playButtonSound("all")
+    end
 
-  elseif inButton(buttons.white, x, y) then
-    pressed = buttons.white
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Hauptlicht", state.white, true)
-    playButtonSound("white")
-    sleep(0.1)
-    state.white = not state.white
-
-  elseif inButton(buttons.all, x, y) then
-    pressed = buttons.all
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Alles EIN/AUS", (state.orange or state.white), true)
-    playButtonSound("all")
-    sleep(0.1)
-    local new = not (state.orange or state.white)
-    state.orange = new
-    state.white  = new
-  end
-
-  applySignals()
+    -- Gearshift Buttons (Impuls)
+    for i,b in ipairs(buttons.gears) do
+        if inButton(b,x,y) then
+            -- kurz gedrückt anzeigen, ohne Licht zu beeinflussen
+            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, true)
+            pulseGear(i, 0.2)
+            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, false)
+            break
+        end
+    end
 end
