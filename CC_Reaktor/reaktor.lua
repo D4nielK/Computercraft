@@ -495,9 +495,27 @@ while true do
   drawTurbineLive()
   drawMatrixLive()
 
-  local e,side,x,y = os.pullEventTimeout("monitor_touch", CFG.REFRESH)
-  if e=="monitor_touch" and side==CFG.RIGHT_MONITOR then
-    local id = hit(x,y)
+-- Timer starten (ersetzt pullEventTimeout)
+local timer = os.startTimer(CFG.REFRESH)
+
+local e, p1, p2, p3 = os.pullEvent()
+ while e ~= "monitor_touch" and not (e == "timer" and p1 == timer) do
+  e, p1, p2, p3 = os.pullEvent()
+ end
+
+ -- Anzeige IMMER aktualisieren
+ drawStatsLive()
+ drawLevelsLive()
+ drawTurbineLive()
+ drawMatrixLive()
+
+ -- Nur bei Touch reagieren
+ if e == "monitor_touch" then
+   local side, x, y = p1, p2, p3
+   if side == CFG.RIGHT_MONITOR then
+    local id = hit(x, y)
     if id then action(id) end
-  end
+   end
+ end
+
 end
