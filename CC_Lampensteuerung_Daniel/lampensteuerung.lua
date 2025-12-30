@@ -1,141 +1,86 @@
--- Monitor + Bundled-Setup
-local mon = peripheral.find("monitor")
-local side = "back" -- Seite mit dem bundled cable anpassen!
-local speaker = peripheral.find("speaker") -- Speaker für Sound
+-- Konfiguration
+local side = "back"           -- Bundled Cable Seite
+local mon = peripheral.wrap("top")
+mon.setTextScale(1.5)
 
--- Farben (ProjectRed / Bundled)
-local ORANGE = colors.orange
-local WHITE  = colors.white
-
-local state = {
-  orange = false,
-  white  = false
+-- Gearshift-Liste: Name und Farbe
+local gears = {
+    {name="GS Grau", color=colors.gray},
+    {name="GS Lila", color=colors.purple},
+    {name="GS Rot", color=colors.red},
+    {name="GS Blau", color=colors.blue},
+    {name="GS Gelb", color=colors.yellow},
 }
 
-local function applySignals()
-  local out = 0
-  if state.orange then out = bit.bor(out, ORANGE) end
-  if state.white  then out = bit.bor(out, WHITE)  end
-  redstone.setBundledOutput(side, out)
-end
+-- Zustand jeder Gearshift
+local states = {}
+for i=1,#gears do states[i] = false end
 
--- ======= UI HELPERS =======
-local function centerX(w, boxW)
-  return math.floor((w - boxW) / 2) + 1
-end
+-- Zentralschalter: false = alle hoch, true = alle runter
+local masterState = false
 
-local function drawButton(x, y, w, h, label, active, pressed)
-  -- Schatten
-  mon.setBackgroundColor(colors.gray)
-  for i = 0, 1 do
-    mon.setCursorPos(x + i, y + h)
-    mon.write(string.rep(" ", w))
-  end
-  for r = 0, 1 do
-    for i = 0, 1 do
-      mon.setCursorPos(x + w, y + r)
-      mon.write(" ")
+-- Zeichnet das Monitor-Interface
+local function draw()
+    mon.clear()
+    mon.setCursorPos(1,1)
+    mon.write("Sequenced Gearshifts")
+
+    for i,g in ipairs(gears) do
+        local y = 2 + i
+        mon.setCursorPos(1,y)
+        mon.write(g.name .. ": ")
+        if states[i] then
+            mon.write("[RUNTER]")
+        else
+            mon.write("[HOCH  ]")
+        end
     end
-  end
 
-  -- Button-Hintergrund
-  local bg = active and colors.lime or colors.lightGray
-  if pressed then bg = colors.green end
-
-  mon.setBackgroundColor(bg)
-  mon.setTextColor(colors.black)
-  for r = 0, h - 1 do
-    mon.setCursorPos(x, y + r)
-    mon.write(string.rep(" ", w))
-  end
-
-  -- Label mittig
-  local tx = x + math.floor((w - #label) / 2)
-  local ty = y + math.floor(h / 2)
-  mon.setCursorPos(tx, ty)
-  mon.write(label)
+    -- Zentralschalter
+    mon.setCursorPos(1, 8)
+    if masterState then
+        mon.write("ZENTRAL: [ALLE HOCH]")
+    else
+        mon.write("ZENTRAL: [ALLE RUNTER]")
+    end
 end
 
-local function clear()
-  mon.setBackgroundColor(colors.black)
-  mon.clear()
+-- Setzt das Bundled Cable aus allen Gearshift-Zuständen
+local function updateOutputs()
+    local out = 0
+    for i,g in ipairs(gears) do
+        if states[i] then
+            out = colors.combine(out, g.color)
+        end
+    end
+    redstone.setBundledOutput(side, out)
 end
 
--- ======= LAYOUT =======
-local function drawAll()
-  clear()
+-- Initial
+draw()
+updateOutputs()
 
-  local w, h = mon.getSize()
-  local btnW = math.max(14, math.floor(w * 0.7))
-  local btnH = 5
-  local spacing = 2
-  local top = 2
-  local x = centerX(w, btnW)
-
-  -- Einzel-Buttons
-  drawButton(x, top, btnW, btnH, "Indirekte Beleuchtung", state.orange, false)
-  drawButton(x, top + btnH + spacing, btnW, btnH, "Hauptlicht", state.white, false)
-
-  -- Zentral-Button
-  drawButton(x, top + (btnH + spacing) * 2, btnW, btnH, "Alles EIN/AUS", (state.orange or state.white), false)
-
-  return {
-    orange = {x = x, y = top, w = btnW, h = btnH},
-    white  = {x = x, y = top + btnH + spacing, w = btnW, h = btnH},
-    all    = {x = x, y = top + (btnH + spacing) * 2, w = btnW, h = btnH},
-  }
-end
-
--- Prüfen ob Klick in Button
-local function inButton(btn, cx, cy)
-  return cx >= btn.x and cx <= btn.x + btn.w - 1
-     and cy >= btn.y and cy <= btn.y + btn.h - 1
-end
-
--- ======= BUTTON SOUNDS =======
-local function playButtonSound(type)
-  if not speaker then return end
-  if type == "orange" then
-    speaker.playSound("minecraft:block.note_block.harp", 1, 1)
-  elseif type == "white" then
-    speaker.playSound("minecraft:block.note_block.bell", 1, 1)
-  elseif type == "all" then
-    speaker.playSound("minecraft:block.note_block.pling", 1, 1)
-  end
-end
-
--- ======= MAIN LOOP =======
-mon.setTextScale(0.5)
-applySignals()
-
+-- Event-Schleife
 while true do
-  local buttons = drawAll()
-  local e, sideClick, x, y = os.pullEvent("monitor_touch")
+    local event, sideEvent, x, y = os.pullEvent("monitor_touch")
 
-  local pressed
-  if inButton(buttons.orange, x, y) then
-    pressed = buttons.orange
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Indirekte Beleuchtung", state.orange, true)
-    playButtonSound("orange")
-    sleep(0.1)
-    state.orange = not state.orange
+    -- einzelne Gearshifts
+    for i,g in ipairs(gears) do
+        local row = 2 + i
+        if y == row then
+            states[i] = not states[i]
+            draw()
+            updateOutputs()
+        end
+    end
 
-  elseif inButton(buttons.white, x, y) then
-    pressed = buttons.white
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Hauptlicht", state.white, true)
-    playButtonSound("white")
-    sleep(0.1)
-    state.white = not state.white
-
-  elseif inButton(buttons.all, x, y) then
-    pressed = buttons.all
-    drawButton(pressed.x, pressed.y, pressed.w, pressed.h, "Alles EIN/AUS", (state.orange or state.white), true)
-    playButtonSound("all")
-    sleep(0.1)
-    local new = not (state.orange or state.white)
-    state.orange = new
-    state.white  = new
-  end
-
-  applySignals()
+    -- Zentralschalter (Row 8)
+    if y == 8 then
+        masterState = not masterState
+        for i=1,#states do
+            states[i] = masterState
+        end
+        draw()
+        updateOutputs()
+    end
 end
