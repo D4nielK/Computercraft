@@ -116,6 +116,33 @@ local function fmtFE(v, perTick)
   return string.format("%.2f%s%s", num, prefix, suf)
 end
 
+-- =========================================================
+-- RUNTIME / INTEGRATION
+-- =========================================================
+local lastEpoch = os.epoch("utc")  -- ms
+local wasOn = false
+local uptimeMs = 0
+
+local fuelUsed_mB = 0            -- integrierter Fuel-Verbrauch (mB)
+local energyGen_FE = 0           -- integrierte Energie (FE)
+
+local function fmtTime(ms)
+  if type(ms) ~= "number" then return "N/A" end
+  local s = math.floor(ms/1000)
+  local h = math.floor(s/3600); s = s - h*3600
+  local m = math.floor(s/60);   s = s - m*60
+  return string.format("%02d:%02d:%02d", h, m, s)
+end
+
+local function fmtMB(mb)
+  if type(mb) ~= "number" then return "N/A" end
+  if mb >= 1000 then
+    return string.format("%.2fB", mb/1000)  -- Buckets
+  end
+  return string.format("%.0fmB", mb)
+end
+
+
 
 local function safeCall(obj, fn, ...)
   if not obj or type(obj[fn]) ~= "function" then return nil end
@@ -161,7 +188,7 @@ local function leftLayout()
 
   local rightH = H - topY - bottomMargin
   local turbH  = math.floor(rightH * 0.45)+4
-  local matH   = rightH - turbH - gap
+  local matH   = rightH - turbH - gap+2
 
   return {
     W=W, H=H,
@@ -207,6 +234,10 @@ local function drawLeftStatic()
   write(monL, x, y+8,   "Burn:")
   write(monL, x, y+9,   "Temp:")
   write(monL, x, y+10,  "Damage:")
+  write(monL, x, y+11,  "Uptime:")
+  write(monL, x, y+12,  "Fuel used:")
+  write(monL, x, y+13,  "Energy gen:")
+
 
   -- Turbine labels (wie gewünscht, mit Leerzeilen)
   local tx = LL.C.x + 2
@@ -310,6 +341,11 @@ local function drawStatsLive()
   writePad(monL, valX+4, y+8,   string.format("%.1fmB/t", (safeCall(r,"getBurnRate") or 0)), valW-4)
   writePad(monL, valX+4, y+9,   string.format("%.0fK", (safeCall(r,"getTemperature") or 0)), valW-4)
   writePad(monL, valX+4, y+10,  pct(safeCall(r,"getDamagePercent")), valW-4)
+  -- Zusatzwerte
+  writePad(monL, valX, y+11, fmtTime(uptimeMs), valW)
+  writePad(monL, valX, y+12, fmtMB(fuelUsed_mB), valW)
+  writePad(monL, valX, y+13, fmtFE(energyGen_FE, false), valW)
+
 end
 
 -- =========================================================
@@ -494,6 +530,35 @@ drawLeftStatic()
 drawRightStatic()
 
 while true do
+
+  -- Zeitdelta
+local now = os.epoch("utc")
+local dt = (now - lastEpoch) / 1000  -- Sekunden
+lastEpoch = now
+
+-- Reactor status
+local on = (safeCall(r, "getStatus") == true)
+
+if on then
+  uptimeMs = uptimeMs + (dt * 1000)
+
+  -- Fuel used (BurnRate ist mB/tick, 20 ticks/s)
+  local br = safeCall(r, "getBurnRate") -- mB/t
+  if type(br) == "number" then
+    fuelUsed_mB = fuelUsed_mB + br * (dt * 20)
+  end
+
+  -- Energy gen aus Turbine (ProductionRate liefert bei dir J/t -> du wandelst in FE/t um)
+  if t then
+    local prodJ = safeCall(t, "getProductionRate")
+    local prodFE = J_to_FE(prodJ)
+    if type(prodFE) == "number" then
+      energyGen_FE = energyGen_FE + prodFE * (dt * 20)
+    end
+  end
+end
+
+
   drawStatsLive()
   drawLevelsLive()
   drawTurbineLive()
