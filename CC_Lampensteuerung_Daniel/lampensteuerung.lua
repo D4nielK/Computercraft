@@ -1,8 +1,8 @@
 -- ================== KONFIGURATION ==================
 local mon = peripheral.find("monitor") or peripheral.wrap("top")
 local speaker = peripheral.find("speaker")
-local side = "back"
-local sideGear = "back"
+local side = "back"       -- Bundled Cable für Licht
+local sideGear = "right"  -- Bundled Cable für Gearshifts
 
 -- Farben für Licht
 local ORANGE = colors.orange
@@ -28,6 +28,7 @@ local function applyLightSignals()
     redstone.setBundledOutput(side, out)
 end
 
+-- Sendet einen kurzen Impuls an den Gearshift
 local function pulseGear(index, duration)
     local out = gears[index].color
     redstone.setBundledOutput(sideGear, out)
@@ -61,7 +62,7 @@ local function drawUI()
     local btnH = 3
     local top = 2
 
-    local buttons = {lights={}, gears={}, masterGear=nil}
+    local buttons = {lights={}, gears={}}
 
     -- Licht Buttons nebeneinander
     drawButton(spacingX, top, btnW, btnH, "Indirekte Beleuchtung", lightState.orange, false)
@@ -74,15 +75,14 @@ local function drawUI()
     drawButton(spacingX, yNext, btnW*2 + spacingX, btnH, (lightState.orange or lightState.white) and "Alles Licht EIN/AUS" or "Alles Licht AUS", (lightState.orange or lightState.white), false)
     buttons.lights.all = {x=spacingX, y=yNext, w=btnW*2 + spacingX, h=btnH}
 
-    -- Gearshift Buttons nebeneinander (Impuls)
-    local yGear = yNext + btnH + spacingY + 2  -- +2 Zeilen Abstand für Lücke
+    -- Gearshift Buttons nebeneinander (Impuls) weiter unten für Lücke
+    local yGear = yNext + btnH + spacingY + 2  -- +2 Zeilen Abstand
     for i,g in ipairs(gears) do
         local col = (i-1)%2
         local row = math.floor((i-1)/2)
         local xPos = spacingX + col*(btnW + spacingX)
         local yPos = yGear + row*(btnH + spacingY)
-        local label = g.name
-        drawButton(xPos, yPos, btnW, btnH, label, false, false)
+        drawButton(xPos, yPos, btnW, btnH, g.name, false, false)
         buttons.gears[i] = {x=xPos, y=yPos, w=btnW, h=btnH}
     end
 
@@ -130,9 +130,10 @@ while true do
     -- Gearshift Buttons (Impuls)
     for i,b in ipairs(buttons.gears) do
         if inButton(b,x,y) then
-            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, true) -- kurz gedrückt
+            -- kurz gedrückt anzeigen, ohne Licht zu beeinflussen
+            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, true)
             pulseGear(i, 0.2)
-            drawUI()
+            drawButton(b.x, b.y, b.w, b.h, gears[i].name, false, false)
             break
         end
     end
