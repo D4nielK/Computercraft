@@ -116,6 +116,14 @@ local function fmtFE(v, perTick)
   return string.format("%.2f%s%s", num, prefix, suf)
 end
 
+local function safeCall(obj, fn, ...)
+  if not obj or type(obj[fn]) ~= "function" then return nil end
+  local ok, res = pcall(obj[fn], ...)
+  if ok then return res end
+  return nil
+end
+
+
 -- =========================================================
 -- RUNTIME / INTEGRATION
 -- =========================================================
@@ -172,15 +180,6 @@ local function fmtMB(mb)
     return string.format("%.2fB", mb/1000)  -- Buckets
   end
   return string.format("%.0fmB", mb)
-end
-
-
-
-local function safeCall(obj, fn, ...)
-  if not obj or type(obj[fn]) ~= "function" then return nil end
-  local ok, res = pcall(obj[fn], ...)
-  if ok then return res end
-  return nil
 end
 
 local function firstCall(obj, names)
