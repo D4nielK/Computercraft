@@ -234,9 +234,9 @@ local function drawLeftStatic()
   write(monL, x, y+8,   "Burn:")
   write(monL, x, y+9,   "Temp:")
   write(monL, x, y+10,  "Damage:")
-  write(monL, x, y+11,  "Uptime:")
-  write(monL, x, y+12,  "Fuel used:")
-  write(monL, x, y+13,  "Energy gen:")
+  write(monL, x, y+12,  "Uptime:")
+  write(monL, x, y+13,  "Fuel used:")
+  write(monL, x, y+14,  "Energy gen:")
 
 
   -- Turbine labels (wie gewünscht, mit Leerzeilen)
@@ -342,9 +342,9 @@ local function drawStatsLive()
   writePad(monL, valX+5, y+9,   string.format("%.0fK", (safeCall(r,"getTemperature") or 0)), valW-5)
   writePad(monL, valX+5, y+10,  pct(safeCall(r,"getDamagePercent")), valW-5)
   -- Zusatzwerte
-  writePad(monL, valX, y+11, fmtTime(uptimeMs), valW)
-  writePad(monL, valX+7, y+12, fmtMB(fuelUsed_mB), valW-7)
-  writePad(monL, valX+7, y+13, fmtFE(energyGen_FE, false), valW-7)
+  writePad(monL, valX, y+12, fmtTime(uptimeMs), valW)
+  writePad(monL, valX+7, y+13, fmtMB(fuelUsed_mB), valW-7)
+  writePad(monL, valX+7, y+14, fmtFE(energyGen_FE, false), valW-7)
 
 end
 
