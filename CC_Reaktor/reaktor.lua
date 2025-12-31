@@ -196,6 +196,17 @@ local function fmtMBt_split(v)
   return string.format("%7.1f", v), "mB/t"  -- 0.1 Auflösung (kannst du auf %.0f ändern)
 end
 
+-- mB/t → B/t (fixe Breite, sauberes Alignment)
+local function fmtBt_split(mB)
+  if type(mB) ~= "number" then
+    return "   N/A", "B/t"
+  end
+
+  local B = mB / 1000
+  return string.format("%7.2f", B), "B/t"
+end
+
+
 -- Kelvin fixer
 local function fmtK_split(v)
   if type(v) ~= "number" then return "N/A", "K" end
@@ -562,9 +573,9 @@ local function drawTurbineLive()
   do local n,u = fmtPct_split(energyPct);       writeValUnit(monL, valX, y+4, n, u, valW) end
   do local n,u = fmtFE_split(maxProd, true);    writeValUnit(monL, valX, y+6, n, u, valW) end
   do local n,u = fmtFE_split(prod, true);       writeValUnit(monL, valX, y+7, n, u, valW) end
-  do local n,u = fmtMBt_split(steamIn);         writeValUnit(monL, valX, y+8, n, u, valW) end
-  do local n,u = fmtMBt_split(maxFlow);         writeValUnit(monL, valX-2, y+9, n, u, valW) end
-  do local n,u = fmtMBt_split(flow);            writeValUnit(monL, valX, y+10,n, u, valW) end
+  do local n,u = fmtBt_split(steamIn);         writeValUnit(monL, valX+4, y+8, n, u, valW-4) end
+  do local n,u = fmtBt_split(maxFlow);         writeValUnit(monL, valX+4, y+9, n, u, valW-4) end
+  do local n,u = fmtBt_split(flow);            writeValUnit(monL, valX+4, y+10,n, u, valW-4) end
 
 end
 
