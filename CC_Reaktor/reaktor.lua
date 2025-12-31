@@ -56,6 +56,13 @@ local function clear(m)
   m.setCursorPos(1,1)
 end
 
+local function safeCall(obj, fn, ...)
+  if not obj or type(obj[fn]) ~= "function" then return nil end
+  local ok, res = pcall(obj[fn], ...)
+  if ok then return res end
+  return nil
+end
+
 local function write(m,x,y,t)
   m.setCursorPos(x,y)
   m.write(t)
@@ -305,16 +312,6 @@ local function fmtFE_split(v, perTick)
   local p = (prefix ~= "" and prefix or " ")
   return string.format("%7.2f", num), p .. unit
 end
-
-
-
-local function safeCall(obj, fn, ...)
-  if not obj or type(obj[fn]) ~= "function" then return nil end
-  local ok, res = pcall(obj[fn], ...)
-  if ok then return res end
-  return nil
-end
-
 
 -- =========================================================
 -- RUNTIME / INTEGRATION
