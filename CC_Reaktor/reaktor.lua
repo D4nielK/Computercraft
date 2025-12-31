@@ -563,7 +563,7 @@ local function drawTurbineLive()
   do local n,u = fmtFE_split(maxProd, true);    writeValUnit(monL, valX, y+6, n, u, valW) end
   do local n,u = fmtFE_split(prod, true);       writeValUnit(monL, valX, y+7, n, u, valW) end
   do local n,u = fmtMBt_split(steamIn);         writeValUnit(monL, valX, y+8, n, u, valW) end
-  do local n,u = fmtMBt_split(maxFlow);         writeValUnit(monL, valX, y+9, n, u, valW) end
+  do local n,u = fmtMBt_split(maxFlow);         writeValUnit(monL, valX-2, y+9, n, u, valW) end
   do local n,u = fmtMBt_split(flow);            writeValUnit(monL, valX, y+10,n, u, valW) end
 
 end
