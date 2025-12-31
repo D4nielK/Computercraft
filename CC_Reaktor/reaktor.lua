@@ -22,6 +22,10 @@ local CFG = {
 
   ENERGY_J_PER_FE = 2.5,
 
+  TEST_REDSTONE_SIDE = "back",     -- Seite wo dein Test-Signal raus soll
+  TEST_PULSE_SEC     = 2.0,        -- wie lange das Signal an bleiben soll
+
+
 }
 
 -- =========================================================
@@ -150,6 +154,67 @@ local function fmtMBt_split(v)
   end
   return string.format("%7.0f", v), "mB/t"
 end
+
+-- =========================================================
+-- RIGHT UI STATE
+-- =========================================================
+local ui = {
+  burnTarget = 0.0,     -- Ziel-BurnRate (mB/t)
+  burnMax    = nil,     -- wird einmal gelesen (max burn)
+  dumpModes  = { "IDLE", "DUMPING", "DUMPING_EXCESS" },
+  dumpIndex  = 1,
+
+  testTimerId = nil,    -- Timer-ID fürs Test-Puls-Aus
+}
+
+local function clamp(x, a, b)
+  if x < a then return a end
+  if x > b then return b end
+  return x
+end
+
+local function round1(x)
+  return math.floor(x * 10 + 0.5) / 10
+end
+
+local function setBurnrateTarget(newVal)
+  local maxB = ui.burnMax or tonumber(safeCall(r, "getMaxBurnRate")) or 9999
+  ui.burnMax = maxB
+  ui.burnTarget = round1(clamp(newVal, 0, maxB))
+
+  -- Versuche zu setzen (Mekanism: meist setBurnRate)
+  if r and r.setBurnRate then
+    pcall(r.setBurnRate, ui.burnTarget)
+  end
+end
+
+local function cycleDumpMode()
+  -- read current (optional)
+  ui.dumpIndex = ui.dumpIndex % #ui.dumpModes + 1
+  local mode = ui.dumpModes[ui.dumpIndex]
+
+  -- Mekanism Turbine: meist setDumpingMode(string)
+  if t and t.setDumpingMode then
+    pcall(t.setDumpingMode, mode)
+  end
+end
+
+local function startTestPulse()
+  if not CFG.TEST_REDSTONE_SIDE then return end
+  redstone.setOutput(CFG.TEST_REDSTONE_SIDE, true)
+  if ui.testTimerId then
+    -- alten Timer ignorieren, wir machen einfach neuen Puls
+    ui.testTimerId = nil
+  end
+  ui.testTimerId = os.startTimer(CFG.TEST_PULSE_SEC or 2.0)
+end
+
+local function stopTestPulse()
+  if not CFG.TEST_REDSTONE_SIDE then return end
+  redstone.setOutput(CFG.TEST_REDSTONE_SIDE, false)
+  ui.testTimerId = nil
+end
+
 
 -- =========================================================
 -- FIXED-COLUMN VALUE WRITERS (no shifting units)
@@ -634,6 +699,20 @@ local function drawButton(id, x,y,w,h, label, bgc)
   buttons[#buttons+1] = {id=id, x=x,y=y,w=w,h=h}
 end
 
+local function drawButtonSmall(id, x,y,w,h, label, bgc)
+  monR.setBackgroundColor(bgc)
+  monR.setTextColor(colors.black)
+  for yy=y,y+h-1 do
+    monR.setCursorPos(x,yy)
+    monR.write(string.rep(" ", w))
+  end
+  -- label linksbündiger, damit es bei schmalen Buttons nicer aussieht
+  monR.setCursorPos(x + 1, y + math.floor(h/2))
+  monR.write(label:sub(1, w-2))
+  buttons[#buttons+1] = {id=id, x=x,y=y,w=w,h=h}
+end
+
+
 local function drawRightStatic()
   clear(monR)
   local W,H = monR.getSize()
@@ -641,35 +720,88 @@ local function drawRightStatic()
   write(monR, math.floor(W/2)-6, 1, "CONTROLS")
   write(monR, math.floor(W/2)-6, 2, "==========")
 
-  -- Oben: Actions (ohne Buttons)
-  panel(monR, 2, 4, W-2, 14, "Actions")
-
-  -- Unten: Settings (Buttons hier rein)
-  local settingsY = 19
-  local settingsH = H - settingsY - 1
-  panel(monR, 2, settingsY, W-2, settingsH, "Settings")
-
   buttons = {}
 
-  -- Buttons im Settings-Panel platzieren
-  local x = 4
-  local w = W - 8
-  local hBtn = 3
+  -- Layout
+  local margin = 2
+  local topY = 4
   local gap = 1
 
-  -- Wir setzen die Buttons unten ins Settings Panel
-  local bottomInside = settingsY + settingsH - 2
-  local yScram = bottomInside - hBtn + 1
-  local yStop  = yScram - (hBtn + gap)
-  local yStart = yStop  - (hBtn + gap)
+  local leftColW = 14          -- Buttons links schmal
+  local rightColW = W - margin*2 - leftColW - gap
 
-  drawButton("start", x, yStart, w, hBtn, "START", colors.green)
-  drawButton("stop",  x, yStop,  w, hBtn, "STOP",  colors.red)
-  drawButton("scram", x, yScram, w, hBtn, "AZ-5",  colors.orange)
+  local leftX  = margin
+  local rightX = margin + leftColW + gap
 
-  -- Platz im Settings-Panel oberhalb der Buttons bleibt frei für neue Controls
-  -- (Slider/Toggle/Mode etc.)
+  local boxH = H - topY - 1
+
+  panel(monR, leftX,  topY, leftColW,  boxH, "Actions")
+  panel(monR, rightX, topY, rightColW, boxH, "Settings")
+
+  -- -------------------------------------------------------
+  -- LEFT: Action Buttons (klein)
+  -- -------------------------------------------------------
+  local bx = leftX + 1
+  local bw = leftColW - 2
+  local bh = 3
+  local by = topY + 3
+  local bg = 1
+
+  drawButtonSmall("start", bx, by + 0*(bh+bg), bw, bh, "START", colors.green)
+  drawButtonSmall("stop",  bx, by + 1*(bh+bg), bw, bh, "STOP",  colors.red)
+  drawButtonSmall("scram", bx, by + 2*(bh+bg), bw, bh, "AZ-5",  colors.orange)
+  drawButtonSmall("test",  bx, by + 3*(bh+bg), bw, bh, "TEST",  colors.lightBlue)
+
+  -- -------------------------------------------------------
+  -- RIGHT: Settings UI
+  -- -------------------------------------------------------
+  monR.setBackgroundColor(colors.white)
+  monR.setTextColor(colors.black)
+
+  local sx = rightX + 2
+  local sy = topY + 3
+
+  -- BurnRate Anzeige
+  monR.setCursorPos(sx, sy)
+  monR.write("BurnRate:")
+
+  -- Wir zeichnen "00.0 mB/t" in fester Position
+  local brStr = string.format("%04.1f", ui.burnTarget)  -- z.B. "00.0"
+  -- Wenn du mehr als 99.9 erlaubst, nimm "%05.1f" und passe die Buttons an.
+  local brX = sx
+  local brY = sy + 1
+  monR.setCursorPos(brX, brY)
+  monR.write(brStr .. " mB/t")
+
+  -- Pfeile ↑↓ über/unter den Stellen: Zehner, Einer, Zehntel
+  -- Positionen in der Zeichenkette:
+  -- brStr = "00.0"
+  --          12 34
+  local digitX = brX -- Start x für brStr
+  local upY = brY - 1
+  local dnY = brY + 1
+
+  -- Zehner (erste 0)
+  drawButtonSmall("br_up_10", digitX+0, upY, 1, 1, "^", colors.lightGray)
+  drawButtonSmall("br_dn_10", digitX+0, dnY, 1, 1, "v", colors.lightGray)
+
+  -- Einer (zweite 0)
+  drawButtonSmall("br_up_1",  digitX+1, upY, 1, 1, "^", colors.lightGray)
+  drawButtonSmall("br_dn_1",  digitX+1, dnY, 1, 1, "v", colors.lightGray)
+
+  -- Zehntel (letzte 0, nach Punkt)
+  drawButtonSmall("br_up_0.1", digitX+3, upY, 1, 1, "^", colors.lightGray)
+  drawButtonSmall("br_dn_0.1", digitX+3, dnY, 1, 1, "v", colors.lightGray)
+
+  -- Dumping Mode
+  local modeY = sy + 6
+  monR.setCursorPos(sx, modeY)
+  monR.write("Turbine Mode:")
+
+  local curMode = (t and safeCall(t, "getDumpingMode")) or ui.dumpModes[ui.dumpIndex]
+  drawButton("dump_cycle", sx, modeY+1, rightColW-4, 3, tostring(curMode), colors.gray)
 end
+
 
 local function hit(x,y)
   for _,b in ipairs(buttons) do
@@ -682,12 +814,37 @@ end
 local function action(id)
   if id=="start" then
     if r.activate then r.activate() end
+
   elseif id=="stop" then
     if r.deactivate then r.deactivate() end
+
   elseif id=="scram" then
     if r.scram then r.scram() end
+
+  elseif id=="test" then
+    startTestPulse()
+
+  elseif id=="dump_cycle" then
+    cycleDumpMode()
+    drawRightStatic() -- label aktualisieren
+
+  elseif id=="br_up_10" then
+    setBurnrateTarget(ui.burnTarget + 10.0); drawRightStatic()
+  elseif id=="br_dn_10" then
+    setBurnrateTarget(ui.burnTarget - 10.0); drawRightStatic()
+
+  elseif id=="br_up_1" then
+    setBurnrateTarget(ui.burnTarget + 1.0); drawRightStatic()
+  elseif id=="br_dn_1" then
+    setBurnrateTarget(ui.burnTarget - 1.0); drawRightStatic()
+
+  elseif id=="br_up_0.1" then
+    setBurnrateTarget(ui.burnTarget + 0.1); drawRightStatic()
+  elseif id=="br_dn_0.1" then
+    setBurnrateTarget(ui.burnTarget - 0.1); drawRightStatic()
   end
 end
+
 
 -- =========================================================
 -- BOOT
@@ -710,11 +867,17 @@ while true do
     e, p1, p2, p3 = os.pullEvent()
   end
 
-  if e == "monitor_touch" then
-    local side, x, y = p1, p2, p3
-    if side == CFG.RIGHT_MONITOR then
-      local id = hit(x, y)
-      if id then action(id) end
-    end
+  if e == "timer" then
+  if ui.testTimerId and p1 == ui.testTimerId then
+    stopTestPulse()
   end
+
+  elseif e == "monitor_touch" then
+   local side, x, y = p1, p2, p3
+   if side == CFG.RIGHT_MONITOR then
+    local id = hit(x, y)
+    if id then action(id) end
+   end
+  end
+
 end
