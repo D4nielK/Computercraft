@@ -159,7 +159,7 @@ end
 -- numW/unitW kannst du global fein-tunen
 local COL = {
   numW  = 8,   -- Zahl-Breite (rechts)
-  unitW = 6,   -- Einheit-Breite (links) -> 6 reicht für "GFE/t"
+  unitW = 7,   -- Einheit-Breite (links) -> 6 reicht für "GFE/t"
   gap   = 1,
 }
 
@@ -212,9 +212,11 @@ end
 
 -- FE / FE/t fixer (Zahl + Prefix getrennt, Einheit bleibt stabil)
 local function fmtFE_split(v, perTick)
-  if type(v) ~= "number" then return "N/A", (perTick and "FE/t" or "FE") end
-
   local unit = perTick and "FE/t" or "FE"
+  if type(v) ~= "number" then
+    return "   N/A", " " .. unit   -- auch hier ein Leerzeichen fürs Align
+  end
+
   local a = math.abs(v)
   local num, prefix = v, ""
 
@@ -224,8 +226,10 @@ local function fmtFE_split(v, perTick)
   elseif a >= 1e3 then num, prefix = v/1e3, "k"
   end
 
-  return string.format("%7.2f", num), prefix .. unit
+  local p = (prefix ~= "" and prefix or " ")
+  return string.format("%7.2f", num), p .. unit
 end
+
 
 
 local function safeCall(obj, fn, ...)
@@ -508,11 +512,11 @@ local function drawStatsLive()
         num, unit = string.format("%7.0f", mb), "mB"
       end
     end
-    writeValUnit(monL, valX+7, y+13, num, unit, valW-7)
+    writeValUnit(monL, valX, y+13, num, unit, valW)
   end
 
   -- Energy gen: FE (fix)
-  do local n,u = fmtFE_split(energyGen_FE, false);                    writeValUnit(monL, valX+7, y+14, n, u, valW-7) end
+  do local n,u = fmtFE_split(energyGen_FE, false);                    writeValUnit(monL, valX, y+14, n, u, valW) end
 end
 
 -- =========================================================
@@ -575,7 +579,7 @@ local function drawMatrixLive()
   local x = LL.E.x + 2
   local y = LL.E.y + 3
 
-  local valX = x + 10
+  local valX = x + 12
   local valW = LL.E.w - (valX - LL.E.x) - 2
 
   local capJ    = mtx.getMaxEnergy()
