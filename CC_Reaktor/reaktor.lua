@@ -498,7 +498,7 @@ local function drawStatsLive()
   do local n,u = fmtPct_split(safeCall(r,"getDamagePercent"));        writeValUnit(monL, valX, y+10, n, u, valW) end
 
   -- Zusatzwerte: Uptime ist Text
-  writePad(monL, valX,   y+12, fmtTimeSeconds(runTime_s), valW)
+  writePad(monL, valX-1,   y+12, fmtTimeSeconds(runTime_s), valW)
 
   -- Fuel used: (wir lassen fmtMB so, weil "mB" oder "B" variieren kann)
   -- aber auch hier fix: Zahl + Einheit getrennt
@@ -528,7 +528,7 @@ local function drawTurbineLive()
 
   local x = LL.C.x + 2
   local y = LL.C.y + 3
-  local valX = x + 12
+  local valX = x + 11
   local valW = LL.C.w - (valX - LL.C.x) - 2
 
   if not t then
@@ -579,7 +579,7 @@ local function drawMatrixLive()
   local x = LL.E.x + 2
   local y = LL.E.y + 3
 
-  local valX = x + 12
+  local valX = x + 11
   local valW = LL.E.w - (valX - LL.E.x) - 2
 
   local capJ    = mtx.getMaxEnergy()
