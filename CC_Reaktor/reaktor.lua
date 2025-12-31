@@ -203,7 +203,7 @@ local function fmtBt_split(mB)
   end
 
   local B = mB / 1000
-  return string.format("%7.2f", B), "B/t"
+  return string.format("%7.2f", B), "  B/t"
 end
 
 
