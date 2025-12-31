@@ -722,85 +722,89 @@ local function drawRightStatic()
 
   buttons = {}
 
-  -- Layout
   local margin = 2
-  local topY = 4
   local gap = 1
 
-  local leftColW = 14          -- Buttons links schmal
+  -- Wir nutzen unten ca. 12 Zeilen für UI (Buttons+Settings)
+  local uiH = 12
+  local topY = H - uiH + 1   -- <-- ANKER UNTEN
+
+  local leftColW  = 16       -- etwas breiter, besser zu klicken
   local rightColW = W - margin*2 - leftColW - gap
 
   local leftX  = margin
   local rightX = margin + leftColW + gap
 
-  local boxH = H - topY - 1
-
-  panel(monR, leftX,  topY, leftColW,  boxH, "Actions")
-  panel(monR, rightX, topY, rightColW, boxH, "Settings")
+  panel(monR, leftX,  topY, leftColW,  uiH, "Actions")
+  panel(monR, rightX, topY, rightColW, uiH, "Settings")
 
   -- -------------------------------------------------------
-  -- LEFT: Action Buttons (klein)
+  -- LINKS: Action Buttons (größer, easier)
   -- -------------------------------------------------------
   local bx = leftX + 1
   local bw = leftColW - 2
   local bh = 3
-  local by = topY + 3
+  local by = topY + 2
   local bg = 1
 
-  drawButtonSmall("start", bx, by + 0*(bh+bg), bw, bh, "START", colors.green)
-  drawButtonSmall("stop",  bx, by + 1*(bh+bg), bw, bh, "STOP",  colors.red)
-  drawButtonSmall("scram", bx, by + 2*(bh+bg), bw, bh, "AZ-5",  colors.orange)
-  drawButtonSmall("test",  bx, by + 3*(bh+bg), bw, bh, "TEST",  colors.lightBlue)
+  drawButton("start", bx, by + 0*(bh+bg), bw, bh, "START", colors.green)
+  drawButton("stop",  bx, by + 1*(bh+bg), bw, bh, "STOP",  colors.red)
+  drawButton("scram", bx, by + 2*(bh+bg), bw, bh, "AZ-5",  colors.orange)
+  drawButton("test",  bx, by + 3*(bh+bg), bw, bh, "TEST",  colors.lightBlue)
 
   -- -------------------------------------------------------
-  -- RIGHT: Settings UI
+  -- RECHTS: Settings unten, mit Platz
   -- -------------------------------------------------------
   monR.setBackgroundColor(colors.white)
   monR.setTextColor(colors.black)
 
   local sx = rightX + 2
-  local sy = topY + 3
+  local sy = topY + 2
 
-  -- BurnRate Anzeige
+  -- BurnRate immer aus Reactor lesen (Fix für 00.0 Bug)
+  do
+    local cur = tonumber(safeCall(r, "getBurnRate"))
+    if cur ~= nil then
+      ui.burnTarget = math.floor(cur * 10 + 0.5) / 10
+    end
+  end
+
   monR.setCursorPos(sx, sy)
-  monR.write("BurnRate:")
+  monR.write("BurnRate")
 
-  -- Wir zeichnen "00.0 mB/t" in fester Position
-  local brStr = string.format("%04.1f", ui.burnTarget)  -- z.B. "00.0"
-  -- Wenn du mehr als 99.9 erlaubst, nimm "%05.1f" und passe die Buttons an.
+  local brStr = string.format("%04.1f", ui.burnTarget)  -- "00.0"
   local brX = sx
-  local brY = sy + 1
+  local brY = sy + 2
   monR.setCursorPos(brX, brY)
   monR.write(brStr .. " mB/t")
 
-  -- Pfeile ↑↓ über/unter den Stellen: Zehner, Einer, Zehntel
-  -- Positionen in der Zeichenkette:
-  -- brStr = "00.0"
-  --          12 34
-  local digitX = brX -- Start x für brStr
+  -- Größere Pfeile: 3 breit, 2 hoch
   local upY = brY - 1
   local dnY = brY + 1
 
-  -- Zehner (erste 0)
-  drawButtonSmall("br_up_10", digitX+0, upY, 1, 1, "^", colors.lightGray)
-  drawButtonSmall("br_dn_10", digitX+0, dnY, 1, 1, "v", colors.lightGray)
+  -- Positionen in "00.0": 1 2 . 4
+  local d0 = brX + 0
+  local d1 = brX + 1
+  local d01 = brX + 3
 
-  -- Einer (zweite 0)
-  drawButtonSmall("br_up_1",  digitX+1, upY, 1, 1, "^", colors.lightGray)
-  drawButtonSmall("br_dn_1",  digitX+1, dnY, 1, 1, "v", colors.lightGray)
+  drawButton("br_up_10",  d0, upY, 3, 1, " ^ ", colors.lightGray)
+  drawButton("br_dn_10",  d0, dnY, 3, 1, " v ", colors.lightGray)
 
-  -- Zehntel (letzte 0, nach Punkt)
-  drawButtonSmall("br_up_0.1", digitX+3, upY, 1, 1, "^", colors.lightGray)
-  drawButtonSmall("br_dn_0.1", digitX+3, dnY, 1, 1, "v", colors.lightGray)
+  drawButton("br_up_1",   d1, upY, 3, 1, " ^ ", colors.lightGray)
+  drawButton("br_dn_1",   d1, dnY, 3, 1, " v ", colors.lightGray)
 
-  -- Dumping Mode
+  drawButton("br_up_0.1", d01, upY, 3, 1, " ^ ", colors.lightGray)
+  drawButton("br_dn_0.1", d01, dnY, 3, 1, " v ", colors.lightGray)
+
+  -- Turbine Mode
   local modeY = sy + 6
   monR.setCursorPos(sx, modeY)
-  monR.write("Turbine Mode:")
+  monR.write("Turbine Mode")
 
   local curMode = (t and safeCall(t, "getDumpingMode")) or ui.dumpModes[ui.dumpIndex]
   drawButton("dump_cycle", sx, modeY+1, rightColW-4, 3, tostring(curMode), colors.gray)
 end
+
 
 
 local function hit(x,y)
@@ -813,20 +817,27 @@ end
 
 local function action(id)
   if id=="start" then
-    if r.activate then r.activate() end
+    if r.activate then pcall(r.activate) end
 
   elseif id=="stop" then
-    if r.deactivate then r.deactivate() end
+    -- Manche Adapter nennen es deactivate / scram / setStatus(false)
+    if r.deactivate then
+      pcall(r.deactivate)
+    elseif r.setStatus then
+      pcall(r.setStatus, false)
+    elseif r.scram then
+      pcall(r.scram)
+    end
 
   elseif id=="scram" then
-    if r.scram then r.scram() end
+    if r.scram then pcall(r.scram) end
 
   elseif id=="test" then
     startTestPulse()
 
   elseif id=="dump_cycle" then
     cycleDumpMode()
-    drawRightStatic() -- label aktualisieren
+    drawRightStatic()
 
   elseif id=="br_up_10" then
     setBurnrateTarget(ui.burnTarget + 10.0); drawRightStatic()
@@ -844,6 +855,7 @@ local function action(id)
     setBurnrateTarget(ui.burnTarget - 0.1); drawRightStatic()
   end
 end
+
 
 
 -- =========================================================
