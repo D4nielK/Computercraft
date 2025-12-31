@@ -636,26 +636,39 @@ end
 
 local function drawRightStatic()
   clear(monR)
-  local W,_ = monR.getSize()
+  local W,H = monR.getSize()
 
   write(monR, math.floor(W/2)-6, 1, "CONTROLS")
   write(monR, math.floor(W/2)-6, 2, "==========")
 
-  panel(monR, 2,4, W-2, 18, "Actions")
+  -- Oben: Actions (ohne Buttons)
+  panel(monR, 2, 4, W-2, 14, "Actions")
+
+  -- Unten: Settings (Buttons hier rein)
+  local settingsY = 19
+  local settingsH = H - settingsY - 1
+  panel(monR, 2, settingsY, W-2, settingsH, "Settings")
 
   buttons = {}
+
+  -- Buttons im Settings-Panel platzieren
   local x = 4
-  local w = W-8
-  local y = 7
-  local h = 4
-  local g = 2
+  local w = W - 8
+  local hBtn = 3
+  local gap = 1
 
-  drawButton("start", x,y,         w,h, "START", colors.green)
-  drawButton("stop",  x,y+h+g,     w,h, "STOP",  colors.red)
-  drawButton("scram", x,y+2*(h+g), w,h, "AZ-5",  colors.orange)
+  -- Wir setzen die Buttons unten ins Settings Panel
+  local bottomInside = settingsY + settingsH - 2
+  local yScram = bottomInside - hBtn + 1
+  local yStop  = yScram - (hBtn + gap)
+  local yStart = yStop  - (hBtn + gap)
 
-  -- Platz für Settings später:
-  panel(monR, 2, 23, W-2, 20, "Settings (later)")
+  drawButton("start", x, yStart, w, hBtn, "START", colors.green)
+  drawButton("stop",  x, yStop,  w, hBtn, "STOP",  colors.red)
+  drawButton("scram", x, yScram, w, hBtn, "AZ-5",  colors.orange)
+
+  -- Platz im Settings-Panel oberhalb der Buttons bleibt frei für neue Controls
+  -- (Slider/Toggle/Mode etc.)
 end
 
 local function hit(x,y)
