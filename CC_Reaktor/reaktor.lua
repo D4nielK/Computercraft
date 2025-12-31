@@ -304,9 +304,9 @@ end
 local function fmtMB(mb)
   if type(mb) ~= "number" then return "N/A" end
   if mb >= 1000 then
-    return string.format("%.2fB", mb/1000)  -- Buckets
+    return string.format("%.2f  B", mb/1000)  -- Buckets
   end
-  return string.format("%.0fmB", mb)
+  return string.format("%.0f  mB", mb)
 end
 
 local function firstCall(obj, names)
