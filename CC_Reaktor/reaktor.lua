@@ -722,11 +722,14 @@ local function drawRightStatic()
   local margin = 2
   local gap = 1
 
-  -- Wir nutzen unten ca. 12 Zeilen für UI (Buttons+Settings)
-  local uiH = 12
-  local topY = H - uiH + 1   -- <-- ANKER UNTEN
+  -- genug Höhe, damit 4 Buttons + Settings sicher passen
+  local uiH  = 18
 
-  local leftColW  = 16       -- etwas breiter, besser zu klicken
+  -- unten verankert, aber 2 Zeilen höher ziehen (besser erreichbar)
+  local topY = (H - uiH + 1) - 2
+  if topY < 4 then topY = 4 end
+
+  local leftColW  = 16
   local rightColW = W - margin*2 - leftColW - gap
 
   local leftX  = margin
@@ -735,72 +738,77 @@ local function drawRightStatic()
   panel(monR, leftX,  topY, leftColW,  uiH, "Actions")
   panel(monR, rightX, topY, rightColW, uiH, "Settings")
 
-  -- -------------------------------------------------------
-  -- LINKS: Action Buttons (größer, easier)
-  -- -------------------------------------------------------
+  -- =========================
+  -- LINKS: Buttons
+  -- =========================
   local bx = leftX + 1
   local bw = leftColW - 2
   local bh = 3
-  local by = topY + 2
   local bg = 1
+  local by = topY + 2
 
   drawButton("start", bx, by + 0*(bh+bg), bw, bh, "START", colors.green)
   drawButton("stop",  bx, by + 1*(bh+bg), bw, bh, "STOP",  colors.red)
   drawButton("scram", bx, by + 2*(bh+bg), bw, bh, "AZ-5",  colors.orange)
   drawButton("test",  bx, by + 3*(bh+bg), bw, bh, "TEST",  colors.lightBlue)
 
-  -- -------------------------------------------------------
-  -- RECHTS: Settings unten, mit Platz
-  -- -------------------------------------------------------
+  -- =========================
+  -- RECHTS: Settings
+  -- =========================
   monR.setBackgroundColor(colors.white)
   monR.setTextColor(colors.black)
 
   local sx = rightX + 2
   local sy = topY + 2
 
-  -- BurnRate immer aus Reactor lesen (Fix für 00.0 Bug)
+  -- BurnRate IMMER einmal aus Reactor lesen (damit nicht "00.0" buggt)
   do
     local cur = tonumber(safeCall(r, "getBurnRate"))
-    if cur ~= nil then
-      ui.burnTarget = math.floor(cur * 10 + 0.5) / 10
-    end
+    if cur ~= nil then ui.burnTarget = math.floor(cur * 10 + 0.5) / 10 end
   end
 
+  -- ---- BurnRate Titel
   monR.setCursorPos(sx, sy)
   monR.write("BurnRate")
 
+  -- ---- Anzeigezeile (Zahl + Einheit)
   local brStr = string.format("%04.1f", ui.burnTarget)  -- "00.0"
-  local brX = sx
-  local brY = sy + 2
-  monR.setCursorPos(brX, brY)
-  monR.write(brStr .. " mB/t")
+  local brX   = sx
+  local brY   = sy + 2
 
-  -- Größere Pfeile: 3 breit, 2 hoch
+  monR.setCursorPos(brX, brY)
+  monR.write(brStr)
+  monR.setCursorPos(brX + #brStr + 1, brY)
+  monR.write("mB/t")
+
+  -- ---- Pfeile: genau wie du sie eingezeichnet hast
+  -- brStr = "0 0 . 0"
   local upY = brY - 1
   local dnY = brY + 1
 
-  -- Positionen in "00.0": 1 2 . 4
-  local d0 = brX + 0
-  local d1 = brX + 1
-  local d01 = brX + 3
+  local tensX   = brX + 0   -- erste 0
+  local onesX   = brX + 1   -- zweite 0
+  local tenthsX = brX + 3   -- nach dem Punkt
 
-  drawButton("br_up_10",  d0, upY, 3, 1, " ^ ", colors.lightGray)
-  drawButton("br_dn_10",  d0, dnY, 3, 1, " v ", colors.lightGray)
+  -- kleine, aber präzise Pfeile (1x1), liegen exakt über den Ziffern
+  drawButton("br_up_10",  tensX,   upY, 1, 1, "^", colors.lightGray)
+  drawButton("br_dn_10",  tensX,   dnY, 1, 1, "v", colors.lightGray)
 
-  drawButton("br_up_1",   d1, upY, 3, 1, " ^ ", colors.lightGray)
-  drawButton("br_dn_1",   d1, dnY, 3, 1, " v ", colors.lightGray)
+  drawButton("br_up_1",   onesX,   upY, 1, 1, "^", colors.lightGray)
+  drawButton("br_dn_1",   onesX,   dnY, 1, 1, "v", colors.lightGray)
 
-  drawButton("br_up_0.1", d01, upY, 3, 1, " ^ ", colors.lightGray)
-  drawButton("br_dn_0.1", d01, dnY, 3, 1, " v ", colors.lightGray)
+  drawButton("br_up_0.1", tenthsX, upY, 1, 1, "^", colors.lightGray)
+  drawButton("br_dn_0.1", tenthsX, dnY, 1, 1, "v", colors.lightGray)
 
-  -- Turbine Mode
-  local modeY = sy + 6
+  -- ---- Turbine Mode darunter (mit etwas Abstand)
+  local modeY = sy + 7
   monR.setCursorPos(sx, modeY)
   monR.write("Turbine Mode")
 
   local curMode = (t and safeCall(t, "getDumpingMode")) or ui.dumpModes[ui.dumpIndex]
   drawButton("dump_cycle", sx, modeY+1, rightColW-4, 3, tostring(curMode), colors.gray)
 end
+
 
 
 
