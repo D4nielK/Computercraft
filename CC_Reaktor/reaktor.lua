@@ -335,23 +335,51 @@ local function updateCounters()
   lastMs = now
   if dt < 0 then dt = 0 end
 
-  local on = safeCall(r, "getStatus") == true
+  local on = (safeCall(r, "getStatus") == true)
 
-  -- Laufzeit: zählt nur wenn Reaktor "ON"
+  -- Laufzeit nur wenn ON
   if on then
     runTime_s = runTime_s + dt
   end
 
-  -- Fuel: nur zählen wenn wirklich verbrannt wird
-  local actual = safeCall(r, "getActualBurnRate") -- mB/t
-  if type(actual) == "number" and actual > 0 then
-    -- optional extra check: Fuel wirklich vorhanden
-    local fuel = safeCall(r, "getFuel") -- mB im Tank (bei dir vorhanden)
-    if type(fuel) == "number" and fuel > 0 then
-      fuelUsed_mB = fuelUsed_mB + actual * TICKS_PER_SEC * dt
+  -- ----------------------------
+  -- Fuel used (mB) integrieren
+  -- ----------------------------
+  -- bevorzugt: ActualBurnRate (mB/tick). Fallback: BurnRate
+  local br = safeCall(r, "getActualBurnRate")
+  if type(br) ~= "number" then
+    br = safeCall(r, "getBurnRate")
+  end
+
+  -- Fuel vorhanden? -> via FuelFilledPercentage (0..1 oder 0..100)
+  local fuelPct = safeCall(r, "getFuelFilledPercentage")
+  local fuelOk = false
+  if type(fuelPct) == "number" then
+    if fuelPct > 1.001 then fuelPct = fuelPct / 100 end
+    fuelOk = fuelPct > 0.0001
+  else
+    -- wenn wir es nicht wissen, zählen wir lieber NICHT (konservativ)
+    fuelOk = false
+  end
+
+  if on and type(br) == "number" and br > 0 and fuelOk then
+    -- br ist mB pro tick -> 20 ticks/s
+    fuelUsed_mB = fuelUsed_mB + br * TICKS_PER_SEC * dt
+  end
+
+  -- ----------------------------
+  -- Energy gen (FE) integrieren
+  -- ----------------------------
+  -- Turbine liefert bei dir getProductionRate() in J/t (du wandelst zu FE/t um)
+  if t then
+    local prodJ = safeCall(t, "getProductionRate")
+    local prodFE_perTick = J_to_FE(prodJ)   -- FE/tick
+    if type(prodFE_perTick) == "number" and prodFE_perTick > 0 then
+      energyGen_FE = energyGen_FE + prodFE_perTick * TICKS_PER_SEC * dt
     end
   end
 end
+
 
 
 local function fmtTimeSeconds(sec)
